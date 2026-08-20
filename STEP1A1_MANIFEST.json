@@ -1,0 +1,25 @@
+{
+  "step": "1A.1",
+  "purpose": "Free demo deployment preparation for Render + Neon",
+  "backend_tests": "9 passed",
+  "render_blueprint_parse": "passed",
+  "services": [
+    "ai-research-api",
+    "ai-research-study"
+  ],
+  "changed_files": [
+    "render.yaml",
+    ".env.render.example",
+    ".env.example",
+    "DEPLOY_RENDER_NEON.md",
+    ".github/workflows/ci.yml",
+    "backend/app/core/config.py",
+    "backend/app/main.py",
+    "backend/tests/test_step1a1.py",
+    "frontend/index.html",
+    "frontend/src/App.tsx",
+    "frontend/src/styles.css",
+    "scripts/verify_deployment.ps1",
+    "README.md"
+  ]
+}
