@@ -1,4 +1,4 @@
-# AI Research Study Management Platform — Step 1B (0.2.0)
+# AI Research Study Management Platform — Step 1A.1 (0.1.2)
 
 Step 1A establishes the core platform used to manage the HumorBot/STARCASM research project.
 
@@ -14,10 +14,6 @@ Step 1A establishes the core platform used to manage the HumorBot/STARCASM resea
 - Project, milestone, task, task-update and risk management
 - Study-site management
 - Administrative audit log
-- Public recruitment intake and applicant reference issuance
-- Consent-to-screen / privacy acknowledgement capture
-- Recruitment staff application queue and eligibility-review status
-- Recruitment-specific RBAC and audit events
 - React + TypeScript management UI
 - Docker Compose development environment
 - Backend tests and a PowerShell smoke test
@@ -142,13 +138,7 @@ The smoke test checks:
 - Demo deployments can seed a least-privilege `PARTICIPANT` identity for RBAC
   acceptance testing without adding a general user-management API.
 
-## Step 1B recruitment boundary
-
-Step 1B implements public recruitment intake, questionnaire plumbing, applicant references and staff eligibility-review workflow. The project plan does not yet define approved inclusion/exclusion criteria or participant-facing consent text, so this build deliberately does not hard-code clinical/research eligibility rules or make automatic eligibility decisions.
-
-An applicant remains a recruitment application. Step 1B does **not** create a participant account, enroll the applicant, or allocate HumorBot/STARCASM/Control.
-
-## Previous Step 1A boundary
+## Step 1A boundary
 
 This build deliberately does **not** implement the full recruitment questionnaire, participant allocation, pre/post tests, or HumorBot/STARCASM study sessions. Those come after the foundation is validated.
 
@@ -184,15 +174,8 @@ or sensitive information.
 - Allows demo participant password rotation through Render environment variables on redeploy.
 
 
-## Step 1B v0.2.0
+### Step 1B v0.2.1 review-counter fix
 
-- Adds `recruitment_applications` with Alembic migration `20260821_0002`.
-- Adds public recruitment info and application-submission endpoints.
-- Issues non-sequential `APP-...` applicant references.
-- Adds duplicate-active-email protection where feasible.
-- Adds recruitment metrics, application queue and eligibility-review API.
-- Adds recruitment-specific RBAC for project/research/recruitment operations.
-- Adds public React recruitment form reachable from the sign-in page.
-- Adds staff Recruitment dashboard with application review.
-- Keeps protocol criteria explicitly unconfigured until research approval.
-- Adds `scripts/verify_step1b.ps1` and Step 1B acceptance documentation.
+The Recruitment dashboard's **Needs review** metric now represents the active
+review queue. It counts both `under_review` and `needs_review` applications.
+The detailed API still returns `under_review` separately.

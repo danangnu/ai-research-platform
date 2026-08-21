@@ -46,3 +46,5 @@ Expected for this build:
 ```
 
 Use synthetic demo values only.
+
+- [ ] Review queue metric: an `under_review` applicant is included in the **Needs review** dashboard count.

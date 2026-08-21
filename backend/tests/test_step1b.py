@@ -96,3 +96,39 @@ def test_public_submission_requires_consent(client):
         },
     )
     assert response.status_code == 422
+
+
+def test_under_review_is_counted_in_needs_review_metric(client, auth_headers):
+    submission = client.post(
+        "/api/public/recruitment/applications",
+        json={
+            "preferred_name": "Synthetic Under Review Applicant",
+            "contact_email": "under.review@example.com",
+            "consent_to_screen": True,
+            "privacy_acknowledged": True,
+            "screening_answers": {
+                "demo_online_access": True,
+                "demo_schedule_availability": True,
+                "demo_instruction_language": True,
+            },
+        },
+    )
+    assert submission.status_code == 201
+    application_id = submission.json()["id"]
+
+    review = client.patch(
+        f"/api/recruitment/applications/{application_id}/review",
+        headers=auth_headers,
+        json={
+            "status": "under_review",
+            "review_note": "Synthetic workflow validation.",
+        },
+    )
+    assert review.status_code == 200
+    assert review.json()["status"] == "under_review"
+
+    metrics = client.get("/api/recruitment/metrics", headers=auth_headers)
+    assert metrics.status_code == 200
+    body = metrics.json()
+    assert body["under_review"] >= 1
+    assert body["needs_review"] >= 1

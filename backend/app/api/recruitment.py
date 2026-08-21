@@ -173,7 +173,12 @@ def recruitment_metrics(
         applications=total,
         submitted=counts.get("submitted", 0),
         under_review=counts.get("under_review", 0),
-        needs_review=counts.get("needs_review", 0),
+        # The dashboard's "Needs review" card represents the active review
+        # queue, so it includes both applications currently under review and
+        # applications explicitly flagged as needing further review.
+        needs_review=(
+            counts.get("under_review", 0) + counts.get("needs_review", 0)
+        ),
         eligible=counts.get("eligible", 0),
         ineligible=counts.get("ineligible", 0),
     )
