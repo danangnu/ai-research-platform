@@ -3,7 +3,7 @@ from __future__ import annotations
 import secrets
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.roles import RECRUITMENT_ROLES
 from app.db.base import utcnow
 from app.db.session import get_db
-from app.models import RecruitmentApplication, StudySite, User
+from app.models import Participant, ParticipantCounter, RecruitmentApplication, SelectionDecision, StudySite, User
 from app.schemas.common import (
     RecruitmentApplicationCreate,
     RecruitmentApplicationOut,
@@ -21,12 +21,18 @@ from app.schemas.common import (
     RecruitmentMetricsOut,
     RecruitmentPublicInfoOut,
     RecruitmentSiteOut,
+    ParticipantOut,
+    SelectionDecisionCreate,
+    SelectionDecisionOut,
 )
 from app.services.audit import write_audit
 
 
 public_router = APIRouter(prefix="/api/public/recruitment", tags=["public recruitment"])
 staff_router = APIRouter(prefix="/api/recruitment", tags=["recruitment"])
+
+ALLOWED_SELECTION_STATUSES = {"selected", "waitlisted", "not_selected"}
+
 
 ALLOWED_REVIEW_STATUSES = {
     "submitted",
@@ -211,6 +217,15 @@ def review_application(
     if application is None:
         raise HTTPException(status_code=404, detail="Recruitment application not found.")
 
+    enrolled_participant = db.scalar(
+        select(Participant).where(Participant.application_id == application.id)
+    )
+    if enrolled_participant is not None and payload.status != "eligible":
+        raise HTTPException(
+            status_code=409,
+            detail="Eligibility is locked after participant enrollment.",
+        )
+
     previous_status = application.status
     application.status = payload.status
     application.review_note = payload.review_note.strip()
@@ -233,3 +248,199 @@ def review_application(
     db.commit()
     db.refresh(application)
     return application
+
+
+@staff_router.get("/selections", response_model=list[SelectionDecisionOut])
+def list_selection_decisions(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(*RECRUITMENT_ROLES)),
+):
+    return list(
+        db.scalars(
+            select(SelectionDecision).order_by(SelectionDecision.decided_at.desc())
+        )
+    )
+
+
+@staff_router.post(
+    "/applications/{application_id}/selection",
+    response_model=SelectionDecisionOut,
+)
+def record_selection_decision(
+    application_id: str,
+    payload: SelectionDecisionCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(*RECRUITMENT_ROLES)),
+):
+    if payload.status not in ALLOWED_SELECTION_STATUSES:
+        raise HTTPException(status_code=422, detail="Invalid participant-selection status.")
+
+    application = db.scalar(
+        select(RecruitmentApplication)
+        .where(RecruitmentApplication.id == application_id)
+        .with_for_update()
+    )
+    if application is None:
+        raise HTTPException(status_code=404, detail="Recruitment application not found.")
+    if application.status != "eligible":
+        raise HTTPException(
+            status_code=409,
+            detail="Only an eligible application can enter participant selection.",
+        )
+
+    enrolled_participant = db.scalar(
+        select(Participant).where(Participant.application_id == application.id)
+    )
+    if enrolled_participant is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Selection is locked after participant enrollment.",
+        )
+
+    decision = db.scalar(
+        select(SelectionDecision).where(SelectionDecision.application_id == application.id)
+    )
+    previous_status = decision.status if decision else None
+    now = utcnow()
+
+    if decision is None:
+        decision = SelectionDecision(
+            application_id=application.id,
+            status=payload.status,
+            note=payload.note.strip(),
+            decided_by_id=user.id,
+            decided_at=now,
+        )
+        db.add(decision)
+    else:
+        decision.status = payload.status
+        decision.note = payload.note.strip()
+        decision.decided_by_id = user.id
+        decision.decided_at = now
+
+    write_audit(
+        db,
+        actor=user,
+        action="participant.selection_recorded",
+        entity_type="recruitment_application",
+        entity_id=application.id,
+        details={
+            "reference_code": application.reference_code,
+            "previous_status": previous_status,
+            "new_status": decision.status,
+        },
+        ip_address=request.client.host if request.client else None,
+    )
+    db.commit()
+    db.refresh(decision)
+    return decision
+
+
+def _next_participant_code(db: Session) -> str:
+    counter = db.scalar(
+        select(ParticipantCounter)
+        .where(ParticipantCounter.key == "participant")
+        .with_for_update()
+    )
+    if counter is None:
+        counter = ParticipantCounter(key="participant", next_value=2)
+        db.add(counter)
+        number = 1
+    else:
+        number = counter.next_value
+        counter.next_value += 1
+    return f"P-{number:06d}"
+
+
+@staff_router.post(
+    "/applications/{application_id}/enroll",
+    response_model=ParticipantOut,
+)
+def enroll_selected_application(
+    application_id: str,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(*RECRUITMENT_ROLES)),
+):
+    application = db.scalar(
+        select(RecruitmentApplication)
+        .where(RecruitmentApplication.id == application_id)
+        .with_for_update()
+    )
+    if application is None:
+        raise HTTPException(status_code=404, detail="Recruitment application not found.")
+
+    existing = db.scalar(
+        select(Participant).where(Participant.application_id == application.id)
+    )
+    if existing is not None:
+        # Idempotent retry: return the existing identity and do not write a
+        # second enrollment audit event.
+        return existing
+
+    if application.status != "eligible":
+        raise HTTPException(
+            status_code=409,
+            detail="Only an eligible application can be enrolled.",
+        )
+
+    decision = db.scalar(
+        select(SelectionDecision).where(
+            SelectionDecision.application_id == application.id
+        )
+    )
+    if decision is None or decision.status != "selected":
+        raise HTTPException(
+            status_code=409,
+            detail="The eligible application must be selected before enrollment.",
+        )
+
+    participant = Participant(
+        participant_code=_next_participant_code(db),
+        application_id=application.id,
+        site_id=application.site_id,
+        user_id=None,
+        lifecycle_status="enrolled",
+        allocation_status="not_allocated",
+        study_group=None,
+        enrolled_by_id=user.id,
+        enrolled_at=utcnow(),
+    )
+    db.add(participant)
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        # A concurrent retry can pass the initial existence check before the
+        # first transaction commits. The database uniqueness constraint is the
+        # final guard; after rollback, return the identity created by the winner.
+        db.rollback()
+        existing = db.scalar(
+            select(Participant).where(Participant.application_id == application_id)
+        )
+        if existing is not None:
+            return existing
+        raise HTTPException(
+            status_code=409, detail="Participant enrollment conflicted with an existing record."
+        ) from exc
+
+    write_audit(
+        db,
+        actor=user,
+        action="participant.enrolled",
+        entity_type="participant",
+        entity_id=participant.id,
+        details={
+            "participant_code": participant.participant_code,
+            "application_id": application.id,
+            "reference_code": application.reference_code,
+            "site_id": application.site_id,
+            "allocation_status": "not_allocated",
+        },
+        ip_address=request.client.host if request.client else None,
+    )
+    db.commit()
+    db.refresh(participant)
+    response.status_code = status.HTTP_201_CREATED
+    return participant

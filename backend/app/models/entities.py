@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     JSON,
+    Integer,
     String,
     Table,
     Text,
@@ -154,6 +155,65 @@ class RecruitmentApplication(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     reviewed_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False, index=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SelectionDecision(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "selection_decisions"
+
+    application_id: Mapped[str] = mapped_column(
+        ForeignKey("recruitment_applications.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    note: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    decided_by_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+class ParticipantCounter(Base):
+    __tablename__ = "participant_counters"
+
+    key: Mapped[str] = mapped_column(String(32), primary_key=True)
+    next_value: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class Participant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "participants"
+
+    participant_code: Mapped[str] = mapped_column(
+        String(32), unique=True, nullable=False, index=True
+    )
+    application_id: Mapped[str] = mapped_column(
+        ForeignKey("recruitment_applications.id", ondelete="RESTRICT"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    site_id: Mapped[str | None] = mapped_column(
+        ForeignKey("study_sites.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), unique=True, nullable=True
+    )
+    lifecycle_status: Mapped[str] = mapped_column(
+        String(32), default="enrolled", nullable=False, index=True
+    )
+    allocation_status: Mapped[str] = mapped_column(
+        String(32), default="not_allocated", nullable=False, index=True
+    )
+    study_group: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    enrolled_by_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    enrolled_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False, index=True
+    )
 
 
 class AuditEvent(UUIDPrimaryKeyMixin, Base):

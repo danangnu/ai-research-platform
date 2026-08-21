@@ -1,4 +1,4 @@
-# AI Research Study Management Platform — Step 1A.1 (0.1.2)
+# AI Research Study Management Platform — Step 1C.1 (0.3.0)
 
 Step 1A establishes the core platform used to manage the HumorBot/STARCASM research project.
 
@@ -179,3 +179,20 @@ or sensitive information.
 The Recruitment dashboard's **Needs review** metric now represents the active
 review queue. It counts both `under_review` and `needs_review` applications.
 The detailed API still returns `under_review` separately.
+
+
+## Step 1C.1 v0.3.0 — Selection & Enrollment Foundation
+
+- Adds a selection decision layer separate from eligibility review.
+- Only eligible applicants can be marked selected, waitlisted or not selected.
+- Only selected applicants can be enrolled.
+- Enrollment creates one server-generated pseudonymous participant identity per application.
+- Enrollment retries are idempotent and cannot create duplicate participants.
+- Participant research records do not contain applicant name or contact email.
+- New participants are `enrolled` and `not_allocated`; `study_group` remains null.
+- Adds participant management metrics/list UI and immediate post-write refresh.
+- Adds `participant.selection_recorded` and `participant.enrolled` audit events.
+- Participant-management data remains restricted to recruitment roles.
+- HumorBot/STARCASM/Control allocation is deliberately deferred to Step 1C.2.
+
+Deployment verification is documented in `STEP1C1_ACCEPTANCE.md` and automated by `scripts/verify_step1c1.ps1`.

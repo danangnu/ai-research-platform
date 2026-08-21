@@ -4,12 +4,16 @@ import {
   AuditEvent,
   login,
   Milestone,
+  Participant,
+  ParticipantMetrics,
+  participantApi,
   Project,
   RecruitmentApplication,
   RecruitmentMetrics,
   RecruitmentPublicInfo,
   recruitmentApi,
   Risk,
+  SelectionDecision,
   setToken,
   StudySite,
   StudyTask,
@@ -29,7 +33,7 @@ type Page =
 const NAV: { page: Page; label: string; step1a: boolean }[] = [
   { page: "overview", label: "Overview", step1a: true },
   { page: "recruitment", label: "Recruitment", step1a: true },
-  { page: "participants", label: "Participants", step1a: false },
+  { page: "participants", label: "Participants", step1a: true },
   { page: "study", label: "Study", step1a: false },
   { page: "models", label: "Models", step1a: false },
   { page: "analysis", label: "Analysis", step1a: false },
@@ -95,6 +99,7 @@ function visibleNavigation(user: User) {
   return NAV.filter((item) => {
     if (item.page === "overview") return true;
     if (item.page === "recruitment") return canRecruit(user);
+    if (item.page === "participants") return canRecruit(user);
     if (item.page === "project") return canReadProjects(user);
     if (item.page === "admin") return canAdminister(user);
     if (item.page === "study") return true;
@@ -237,7 +242,7 @@ function Overview({
             STARCASM and control-group study.
           </p>
         </div>
-        <span className="status-pill">Step 1B</span>
+        <span className="status-pill">Step 1C.1</span>
       </div>
 
       <div className="metric-grid">
@@ -262,13 +267,15 @@ function Overview({
 
         <section className="panel">
           <p className="eyebrow">Current stage</p>
-          <h2>Recruitment intake & review</h2>
+          <h2>Selection & enrollment foundation</h2>
           <ul className="checklist">
             <li>Step 1A foundation accepted</li>
             <li>Public synthetic application intake</li>
             <li>Consent-to-screen capture</li>
             <li>Applicant reference issuance</li>
             <li>Eligibility-review workflow</li>
+            <li>Selection decision tracking</li>
+            <li>Pseudonymous participant enrollment</li>
           </ul>
         </section>
       </div>
@@ -498,16 +505,26 @@ function Recruitment({
   info,
   applications,
   metrics,
+  selections,
+  participants,
   reload,
 }: {
   info: RecruitmentPublicInfo | null;
   applications: RecruitmentApplication[];
   metrics: RecruitmentMetrics | null;
+  selections: SelectionDecision[];
+  participants: Participant[];
   reload: () => Promise<void>;
 }) {
   const [selectedId, setSelectedId] = useState("");
   const [message, setMessage] = useState("");
   const selected = applications.find((item) => item.id === selectedId) || applications[0] || null;
+  const selection = selected
+    ? selections.find((item) => item.application_id === selected.id) || null
+    : null;
+  const enrolledParticipant = selected
+    ? participants.find((item) => item.application_id === selected.id) || null
+    : null;
 
   useEffect(() => {
     if (!selectedId && applications.length) setSelectedId(applications[0].id);
@@ -533,6 +550,34 @@ function Recruitment({
     }
   }
 
+  async function saveSelection(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+      await recruitmentApi.recordSelection(selected.id, {
+        status: data.get("selection_status"),
+        note: data.get("selection_note") || "",
+      });
+      setMessage(`Selection saved for ${selected.reference_code}.`);
+      await reload();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Unable to save participant selection.");
+    }
+  }
+
+  async function enroll() {
+    if (!selected) return;
+    try {
+      const participant = await recruitmentApi.enroll(selected.id);
+      setMessage(`Participant ${participant.participant_code} enrolled.`);
+      await reload();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Unable to enroll participant.");
+    }
+  }
+
   const siteName = (siteId: string | null) => {
     if (!siteId) return "No site";
     return info?.sites.find((site) => site.id === siteId)?.name || "Unknown site";
@@ -543,12 +588,12 @@ function Recruitment({
       <div className="page-heading">
         <div>
           <p className="eyebrow">Recruitment operations</p>
-          <h1>Applications & Eligibility Review</h1>
+          <h1>Applications, Selection & Enrollment</h1>
           <p className="muted">
-            Step 1B separates applicants from enrolled participants. No group allocation or participant account is created here.
+            Step 1C.1 keeps eligibility, selection and enrollment as separate audited decisions. Group allocation is not performed yet.
           </p>
         </div>
-        <span className="status-pill">Step 1B</span>
+        <span className="status-pill">Step 1C.1</span>
       </div>
 
       {message && <div className="alert">{message}</div>}
@@ -618,6 +663,47 @@ function Recruitment({
                 <textarea name="review_note" rows={3} defaultValue={selected.review_note} placeholder="Reviewer note (synthetic demo only)" />
                 <button className="primary">Save eligibility review</button>
               </form>
+
+              {selected.status === "eligible" && (
+                <div className="selection-block">
+                  <p className="eyebrow">Participant selection</p>
+                  {enrolledParticipant ? (
+                    <div className="enrollment-success">
+                      <strong>Participant enrolled</strong>
+                      <span>{enrolledParticipant.participant_code}</span>
+                      <small>Allocation: Not allocated</small>
+                    </div>
+                  ) : (
+                    <>
+                      <form
+                        className="compact-form"
+                        onSubmit={saveSelection}
+                        key={`${selected.id}-${selection?.updated_at || "new"}`}
+                      >
+                        <select name="selection_status" defaultValue={selection?.status || "selected"}>
+                          <option value="selected">Selected</option>
+                          <option value="waitlisted">Waitlisted</option>
+                          <option value="not_selected">Not selected</option>
+                        </select>
+                        <textarea
+                          name="selection_note"
+                          rows={3}
+                          defaultValue={selection?.note || ""}
+                          placeholder="Selection note (synthetic demo only)"
+                        />
+                        <button className="primary">Save selection</button>
+                      </form>
+                      {selection?.status === "selected" && (
+                        <div className="enrollment-action">
+                          <strong>Selected for enrollment</strong>
+                          <p className="tiny">Enrollment creates a pseudonymous participant identity. Study-group allocation remains disabled until Step 1C.2.</p>
+                          <button type="button" className="primary" onClick={enroll}>Enroll participant</button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </>
           )}
         </section>
@@ -626,6 +712,70 @@ function Recruitment({
   );
 }
 
+
+function ParticipantsPage({
+  participants,
+  metrics,
+  info,
+}: {
+  participants: Participant[];
+  metrics: ParticipantMetrics | null;
+  info: RecruitmentPublicInfo | null;
+}) {
+  const siteName = (siteId: string | null) => {
+    if (!siteId) return "No site";
+    return info?.sites.find((site) => site.id === siteId)?.name || "Unknown site";
+  };
+
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Participant management</p>
+          <h1>Participants</h1>
+          <p className="muted">
+            Step 1C.1 stores pseudonymous participant identities only. Experimental allocation begins in Step 1C.2.
+          </p>
+        </div>
+        <span className="status-pill">Step 1C.1</span>
+      </div>
+
+      <div className="metric-grid">
+        <Metric label="Total participants" value={metrics?.participants ?? 0} />
+        <Metric label="Enrolled" value={metrics?.enrolled ?? 0} />
+        <Metric label="Allocated" value={metrics?.allocated ?? 0} />
+        <Metric label="Remaining target" value={metrics?.remaining_target ?? 600} />
+      </div>
+
+      <section className="panel">
+        <div className="panel-heading-row">
+          <div>
+            <p className="eyebrow">Participant queue</p>
+            <h2>Enrolled participants</h2>
+          </div>
+          <span className="tag">{participants.length} total</span>
+        </div>
+        <div className="list participant-list">
+          {participants.map((participant) => (
+            <div className="participant-row" key={participant.id}>
+              <div>
+                <strong>{participant.participant_code}</strong>
+                <span>{siteName(participant.site_id)}</span>
+              </div>
+              <div className="participant-statuses">
+                <span className="tag recruitment-eligible">{participant.lifecycle_status}</span>
+                <span className="tag">{participant.allocation_status.replaceAll("_", " ")}</span>
+              </div>
+            </div>
+          ))}
+          {!participants.length && (
+            <p className="muted">No participants have been enrolled yet.</p>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
 function ProjectPage({
   projects,
   selectedProject,
@@ -1052,6 +1202,9 @@ export default function App() {
   const [recruitmentInfo, setRecruitmentInfo] = useState<RecruitmentPublicInfo | null>(null);
   const [recruitmentApplications, setRecruitmentApplications] = useState<RecruitmentApplication[]>([]);
   const [recruitmentMetrics, setRecruitmentMetrics] = useState<RecruitmentMetrics | null>(null);
+  const [selectionDecisions, setSelectionDecisions] = useState<SelectionDecision[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participantMetrics, setParticipantMetrics] = useState<ParticipantMetrics | null>(null);
 
   function clearProjectState() {
     setProjects([]);
@@ -1070,6 +1223,9 @@ export default function App() {
     setRecruitmentInfo(null);
     setRecruitmentApplications([]);
     setRecruitmentMetrics(null);
+    setSelectionDecisions([]);
+    setParticipants([]);
+    setParticipantMetrics(null);
   }
 
   function clearRoleScopedState() {
@@ -1117,14 +1273,27 @@ export default function App() {
     }
 
     if (canRecruit(user)) {
-      const [infoRow, applicationRows, metricRow] = await Promise.all([
+      const [
+        infoRow,
+        applicationRows,
+        metricRow,
+        selectionRows,
+        participantRows,
+        participantMetricRow,
+      ] = await Promise.all([
         recruitmentApi.publicInfo(),
         recruitmentApi.applications(),
         recruitmentApi.metrics(),
+        recruitmentApi.selections(),
+        participantApi.participants(),
+        participantApi.metrics(),
       ]);
       setRecruitmentInfo(infoRow);
       setRecruitmentApplications(applicationRows);
       setRecruitmentMetrics(metricRow);
+      setSelectionDecisions(selectionRows);
+      setParticipants(participantRows);
+      setParticipantMetrics(participantMetricRow);
     } else {
       clearRecruitmentState();
     }
@@ -1274,7 +1443,17 @@ export default function App() {
             info={recruitmentInfo}
             applications={recruitmentApplications}
             metrics={recruitmentMetrics}
+            selections={selectionDecisions}
+            participants={participants}
             reload={loadAll}
+          />
+        )}
+
+        {page === "participants" && canRecruit(user) && (
+          <ParticipantsPage
+            participants={participants}
+            metrics={participantMetrics}
+            info={recruitmentInfo}
           />
         )}
 
@@ -1296,7 +1475,7 @@ export default function App() {
           <AdminPage sites={sites} audit={audit} reload={loadAll} />
         )}
 
-        {["participants", "study", "models", "analysis"].includes(page) && (
+        {["study", "models", "analysis"].includes(page) && (
           <ComingSoon title={title} />
         )}
       </main>

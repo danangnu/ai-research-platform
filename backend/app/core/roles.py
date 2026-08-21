@@ -46,3 +46,8 @@ RECRUITMENT_ROLES = {
     RESEARCH_LEAD,
     RESEARCH_ASSISTANT,
 }
+
+
+# Step 1C.1 participant identity/selection data remains recruitment-operations
+# data and is not exposed to AI/ML engineering or participant roles.
+PARTICIPANT_MANAGEMENT_ROLES = RECRUITMENT_ROLES

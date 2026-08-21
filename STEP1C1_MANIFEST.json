@@ -1,0 +1,25 @@
+{
+  "step": "1C.1",
+  "version": "0.3.0-step1c1",
+  "title": "Selection & Enrollment Foundation",
+  "includes": [
+    "selection decision persistence",
+    "eligible-only selection gate",
+    "selected-only enrollment gate",
+    "server-generated pseudonymous participant codes",
+    "idempotent one-participant-per-application enrollment",
+    "participant management API and UI",
+    "participant metrics",
+    "selection and enrollment audit events",
+    "recruitment-role RBAC",
+    "Alembic migration 20260821_0003",
+    "Step 1C.1 backend and deployment acceptance tests"
+  ],
+  "excluded_until_step_1c2": [
+    "HumorBot allocation",
+    "STARCASM allocation",
+    "Control allocation",
+    "randomization",
+    "stratification"
+  ]
+}

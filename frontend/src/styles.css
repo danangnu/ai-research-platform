@@ -835,3 +835,85 @@ nav small {
     grid-template-columns: 1fr;
   }
 }
+
+/* Step 1C.1 selection and enrollment */
+.selection-block {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.enrollment-action,
+.enrollment-success {
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  background: #f5f7ff;
+}
+
+.enrollment-action strong,
+.enrollment-success strong,
+.enrollment-success span,
+.enrollment-success small {
+  display: block;
+}
+
+.enrollment-action p {
+  margin: 5px 0 10px;
+}
+
+.enrollment-success span {
+  margin: 5px 0;
+  color: #312e81;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.enrollment-success small {
+  color: #64748b;
+}
+
+.participant-list {
+  margin-top: 10px;
+}
+
+.participant-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid #e6eaf1;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.participant-row strong,
+.participant-row > div > span {
+  display: block;
+}
+
+.participant-row > div > span:not(.tag) {
+  margin-top: 3px;
+  color: #7b8799;
+  font-size: 0.78rem;
+}
+
+.participant-statuses {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .participant-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .participant-statuses {
+    justify-content: flex-start;
+  }
+}

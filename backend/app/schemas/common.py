@@ -223,3 +223,42 @@ class RecruitmentMetricsOut(BaseModel):
     needs_review: int
     eligible: int
     ineligible: int
+
+
+class SelectionDecisionCreate(BaseModel):
+    status: str = Field(min_length=2, max_length=32)
+    note: str = Field(default="", max_length=2000)
+
+
+class SelectionDecisionOut(ORMModel):
+    id: str
+    application_id: str
+    status: str
+    note: str
+    decided_by_id: str | None
+    decided_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class ParticipantOut(ORMModel):
+    id: str
+    participant_code: str
+    application_id: str
+    site_id: str | None
+    user_id: str | None
+    lifecycle_status: str
+    allocation_status: str
+    study_group: str | None
+    enrolled_by_id: str | None
+    enrolled_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class ParticipantMetricsOut(BaseModel):
+    participants: int
+    enrolled: int
+    allocated: int
+    not_allocated: int
+    remaining_target: int

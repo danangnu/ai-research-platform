@@ -291,4 +291,65 @@ export const recruitmentApi = {
         body: JSON.stringify(body),
       },
     ),
+
+  selections: () =>
+    request<SelectionDecision[]>("/api/recruitment/selections"),
+
+  recordSelection: (
+    applicationId: string,
+    body: Record<string, unknown>,
+  ) =>
+    request<SelectionDecision>(
+      `/api/recruitment/applications/${applicationId}/selection`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
+
+  enroll: (applicationId: string) =>
+    request<Participant>(
+      `/api/recruitment/applications/${applicationId}/enroll`,
+      { method: "POST" },
+    ),
+};
+
+
+export type SelectionDecision = {
+  id: string;
+  application_id: string;
+  status: "selected" | "waitlisted" | "not_selected";
+  note: string;
+  decided_by_id: string | null;
+  decided_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Participant = {
+  id: string;
+  participant_code: string;
+  application_id: string;
+  site_id: string | null;
+  user_id: string | null;
+  lifecycle_status: string;
+  allocation_status: string;
+  study_group: string | null;
+  enrolled_by_id: string | null;
+  enrolled_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ParticipantMetrics = {
+  participants: number;
+  enrolled: number;
+  allocated: number;
+  not_allocated: number;
+  remaining_target: number;
+};
+
+export const participantApi = {
+  participants: () => request<Participant[]>("/api/participants"),
+  metrics: () => request<ParticipantMetrics>("/api/participants/metrics"),
 };

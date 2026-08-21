@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.api.admin import router as admin_router
 from app.api.auth import router as auth_router
 from app.api.projects import router as projects_router
+from app.api.participants import router as participants_router
 from app.api.recruitment import public_router as public_recruitment_router
 from app.api.recruitment import staff_router as recruitment_router
 from app.core.config import settings
@@ -40,6 +41,7 @@ app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(public_recruitment_router)
 app.include_router(recruitment_router)
+app.include_router(participants_router)
 app.include_router(admin_router)
 
 
