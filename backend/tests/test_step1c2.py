@@ -158,8 +158,18 @@ def test_step1c2_balanced_server_allocation_idempotency_rbac_and_audit(
 
 
 def test_step1c2_enforces_group_capacity(client, auth_headers, monkeypatch):
-    # Reduce the per-arm cap for this test. Earlier test allocations already fill
-    # one place in each group, so a new participant cannot be allocated.
+    # Fill one place in each arm inside this test so the capacity assertion does
+    # not depend on another test having run first.
+    for _ in range(3):
+        enrolled = _enroll(client, auth_headers)
+        allocated = client.post(
+            f"/api/participants/{enrolled['id']}/allocate",
+            headers=auth_headers,
+        )
+        assert allocated.status_code == 201
+
+    # Reduce the per-arm cap after every group has at least one allocation. A new
+    # participant must now be rejected because no group has remaining capacity.
     monkeypatch.setattr(participant_module, "TARGET_PER_GROUP", 1)
     participant = _enroll(client, auth_headers)
     response = client.post(

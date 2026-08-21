@@ -1,0 +1,38 @@
+{
+  "step": "1C.3",
+  "version": "0.4.0-step1c3",
+  "title": "Participant Management UI",
+  "includes": [
+    "pseudonymous participant code and technical-ID search",
+    "lifecycle-status filtering",
+    "allocation-status filtering",
+    "HumorBot / STARCASM / Control condition filtering",
+    "study-site and no-site filtering",
+    "inclusive enrollment-date range filtering",
+    "newest, oldest and participant-code sorting",
+    "25-row participant pagination",
+    "participant detail view with enrollment and allocation metadata",
+    "explicit unlinked-account state for the deferred Step 1C.4 integration",
+    "loading, error, no-participant and no-filter-match states",
+    "responsive desktop and mobile participant workspace",
+    "Step 1C.3 backend data-contract and RBAC acceptance coverage",
+    "Step 1C.3 deployment verification script"
+  ],
+  "privacy_boundary": {
+    "participant_workspace_is_pseudonymous": true,
+    "applicant_name_exposed": false,
+    "applicant_contact_email_exposed": false
+  },
+  "unchanged": [
+    "balanced_random_v1 allocation behavior",
+    "200 HumorBot / 200 STARCASM / 200 Control capacity",
+    "allocation immutability and idempotency",
+    "allocation protocol_finalized remains false"
+  ],
+  "deferred": [
+    "participant account linkage and real participant RBAC",
+    "participant lifecycle transition actions",
+    "final protocol-approved stratification",
+    "final consolidated Step 1C.5 acceptance suite"
+  ]
+}

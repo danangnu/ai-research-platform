@@ -1,4 +1,4 @@
-# AI Research Study Management Platform — Step 1C.2 (0.3.1)
+# AI Research Study Management Platform — Step 1C.3 (0.4.0)
 
 Step 1A establishes the core platform used to manage the HumorBot/STARCASM research project.
 
@@ -213,3 +213,17 @@ Deployment verification is documented in `STEP1C1_ACCEPTANCE.md` and automated b
 - The allocation engine is explicitly marked `protocol_finalized = false`: final stratification/randomization criteria remain subject to the approved research protocol.
 
 Deployment verification is documented in `STEP1C2_ACCEPTANCE.md` and automated by `scripts/verify_step1c2.ps1`.
+
+
+## Step 1C.3 v0.4.0 — Participant Management UI
+
+- Adds participant-code and technical-ID search without exposing applicant identity.
+- Adds lifecycle, allocation, assigned-condition, site and inclusive enrollment-date filters.
+- Adds newest, oldest and participant-code sorting with 25-row pagination.
+- Adds a participant detail panel for pseudonymous identifiers, site, enrollment, lifecycle, allocation and account-link status.
+- Loads immutable allocation method, algorithm version, timestamp and record ID for allocated participants.
+- Adds explicit loading, error, empty-list and no-filter-match states.
+- Preserves participant-management RBAC and keeps participant accounts unlinked until Step 1C.4.
+- Does not change the accepted Step 1C.2 allocation algorithm, capacity or protocol boundary.
+
+Deployment verification is documented in `STEP1C3_ACCEPTANCE.md` and automated by `scripts/verify_step1c3.ps1`.

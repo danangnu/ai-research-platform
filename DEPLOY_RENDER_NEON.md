@@ -218,3 +218,22 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 Step 1C.2 is still demo/protocol-foundation functionality. Do not use the
 balanced-random foundation for live study allocation until the final
 stratification/randomization method is approved by the research protocol.
+
+## Step 1C.3 deployment verification
+
+After deploying version `0.4.0-step1c3`, run:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
+.\scripts\verify_step1c3.ps1 `
+  -ApiUrl "https://ai-research-api-00zg.onrender.com" `
+  -AdminEmail "<your admin email>" `
+  -AdminPassword '<your admin password>' `
+  -ParticipantEmail "participant.demo@example.com" `
+  -ParticipantPassword '<demo participant password>'
+```
+
+Then complete the search, combined-filter, sort, date-range, detail-panel,
+no-results, clear-filter and refresh-persistence checks in
+`STEP1C3_ACCEPTANCE.md`.

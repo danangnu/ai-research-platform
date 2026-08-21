@@ -6,6 +6,7 @@ import {
   login,
   Milestone,
   Participant,
+  ParticipantAllocation,
   ParticipantMetrics,
   participantApi,
   Project,
@@ -167,7 +168,7 @@ function LoginScreen({
         <p className="eyebrow">Research Operations</p>
         <h1>AI Research Study Management Platform</h1>
         <p className="muted">
-          Step 1C.2 · Experimental allocation foundation
+          Step 1C.3 · Participant management UI
         </p>
 
         <form onSubmit={submit} className="stack">
@@ -220,8 +221,8 @@ function ComingSoon({ title }: { title: string }) {
       <h2>{title}</h2>
       <p className="muted">
         The navigation position is reserved now so later study modules fit
-        into the same architecture. Step 1C.2 implements the allocation
-        foundation; pre/post tests and model-study interactions remain later phases.
+        into the same architecture. Step 1C.3 adds the searchable participant
+        workspace; pre/post tests and model-study interactions remain later phases.
       </p>
     </section>
   );
@@ -254,7 +255,7 @@ function Overview({
             STARCASM and control-group study.
           </p>
         </div>
-        <span className="status-pill">Step 1C.2</span>
+        <span className="status-pill">Step 1C.3</span>
       </div>
 
       <div className="metric-grid">
@@ -279,7 +280,7 @@ function Overview({
 
         <section className="panel">
           <p className="eyebrow">Current stage</p>
-          <h2>Experimental allocation foundation</h2>
+          <h2>Participant management UI</h2>
           <ul className="checklist">
             <li>Step 1A foundation accepted</li>
             <li>Public synthetic application intake</li>
@@ -290,6 +291,8 @@ function Overview({
             <li>Pseudonymous participant enrollment</li>
             <li>Server-side balanced random allocation</li>
             <li>Immutable allocation audit record</li>
+            <li>Searchable, filterable participant workspace</li>
+            <li>Pseudonymous participant detail view</li>
           </ul>
         </section>
       </div>
@@ -604,10 +607,10 @@ function Recruitment({
           <p className="eyebrow">Recruitment operations</p>
           <h1>Applications, Selection & Enrollment</h1>
           <p className="muted">
-            Step 1C.2 keeps eligibility, selection and enrollment separate while adding controlled server-side allocation for enrolled participants.
+            Step 1C.3 preserves the accepted eligibility, selection, enrollment and allocation boundaries while adding participant-management search and inspection.
           </p>
         </div>
-        <span className="status-pill">Step 1C.2</span>
+        <span className="status-pill">Step 1C.3</span>
       </div>
 
       {message && <div className="alert">{message}</div>}
@@ -733,6 +736,8 @@ function ParticipantsPage({
   allocationSummary,
   info,
   allowAllocate,
+  loading,
+  loadError,
   reload,
 }: {
   participants: Participant[];
@@ -740,15 +745,162 @@ function ParticipantsPage({
   allocationSummary: AllocationSummary | null;
   info: RecruitmentPublicInfo | null;
   allowAllocate: boolean;
+  loading: boolean;
+  loadError: string;
   reload: (projectId?: string) => Promise<void>;
 }) {
   const [message, setMessage] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [search, setSearch] = useState("");
+  const [lifecycleFilter, setLifecycleFilter] = useState("all");
+  const [allocationFilter, setAllocationFilter] = useState("all");
+  const [groupFilter, setGroupFilter] = useState("all");
+  const [siteFilter, setSiteFilter] = useState("all");
+  const [enrolledFrom, setEnrolledFrom] = useState("");
+  const [enrolledTo, setEnrolledTo] = useState("");
+  const [sortOrder, setSortOrder] = useState("enrolled_desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedParticipantId, setSelectedParticipantId] = useState("");
+  const [selectedAllocation, setSelectedAllocation] = useState<ParticipantAllocation | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+
+  const pageSize = 25;
 
   const siteName = (siteId: string | null) => {
     if (!siteId) return "No site";
     return info?.sites.find((site) => site.id === siteId)?.name || "Unknown site";
   };
+
+  const formatDate = (value: string) =>
+    new Date(value).toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const filteredParticipants = useMemo(() => {
+    if (enrolledFrom && enrolledTo && enrolledFrom > enrolledTo) return [];
+
+    const query = search.trim().toLowerCase();
+    const rows = participants.filter((participant) => {
+      const enrollmentDate = participant.enrolled_at.slice(0, 10);
+      const matchesSearch =
+        !query ||
+        participant.participant_code.toLowerCase().includes(query) ||
+        participant.id.toLowerCase().includes(query);
+      const matchesLifecycle =
+        lifecycleFilter === "all" || participant.lifecycle_status === lifecycleFilter;
+      const matchesAllocation =
+        allocationFilter === "all" || participant.allocation_status === allocationFilter;
+      const matchesGroup =
+        groupFilter === "all" || participant.study_group === groupFilter;
+      const matchesSite =
+        siteFilter === "all" ||
+        (siteFilter === "none" ? !participant.site_id : participant.site_id === siteFilter);
+      const matchesFrom = !enrolledFrom || enrollmentDate >= enrolledFrom;
+      const matchesTo = !enrolledTo || enrollmentDate <= enrolledTo;
+
+      return (
+        matchesSearch &&
+        matchesLifecycle &&
+        matchesAllocation &&
+        matchesGroup &&
+        matchesSite &&
+        matchesFrom &&
+        matchesTo
+      );
+    });
+
+    return [...rows].sort((left, right) => {
+      if (sortOrder === "participant_code") {
+        return left.participant_code.localeCompare(right.participant_code);
+      }
+      const difference =
+        new Date(left.enrolled_at).getTime() - new Date(right.enrolled_at).getTime();
+      return sortOrder === "enrolled_asc" ? difference : -difference;
+    });
+  }, [
+    participants,
+    search,
+    lifecycleFilter,
+    allocationFilter,
+    groupFilter,
+    siteFilter,
+    enrolledFrom,
+    enrolledTo,
+    sortOrder,
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredParticipants.length / pageSize));
+  const invalidDateRange = Boolean(
+    enrolledFrom && enrolledTo && enrolledFrom > enrolledTo,
+  );
+  const pagedParticipants = filteredParticipants.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+  const selectedParticipant =
+    participants.find((participant) => participant.id === selectedParticipantId) || null;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    search,
+    lifecycleFilter,
+    allocationFilter,
+    groupFilter,
+    siteFilter,
+    enrolledFrom,
+    enrolledTo,
+    sortOrder,
+  ]);
+
+  useEffect(() => {
+    if (!selectedParticipant || selectedParticipant.allocation_status !== "allocated") {
+      setSelectedAllocation(null);
+      setDetailLoading(false);
+      setDetailError("");
+      return;
+    }
+
+    let active = true;
+    setDetailLoading(true);
+    setDetailError("");
+    participantApi
+      .allocation(selectedParticipant.id)
+      .then((allocation) => {
+        if (active) setSelectedAllocation(allocation);
+      })
+      .catch((err) => {
+        if (active) {
+          setSelectedAllocation(null);
+          setDetailError(
+            err instanceof Error ? err.message : "Unable to load allocation details.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setDetailLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedParticipant?.id, selectedParticipant?.allocation_status]);
+
+  function clearFilters() {
+    setSearch("");
+    setLifecycleFilter("all");
+    setAllocationFilter("all");
+    setGroupFilter("all");
+    setSiteFilter("all");
+    setEnrolledFrom("");
+    setEnrolledTo("");
+    setSortOrder("enrolled_desc");
+  }
 
   async function allocate(participant: Participant) {
     if (!allowAllocate || participant.allocation_status === "allocated") return;
@@ -770,16 +922,18 @@ function ParticipantsPage({
       <div className="page-heading">
         <div>
           <p className="eyebrow">Participant management</p>
-          <h1>Participants & Allocation</h1>
+          <h1>Participant Management</h1>
           <p className="muted">
-            Step 1C.2 records one immutable server-side assignment per enrolled participant.
-            The current balanced-random foundation is provisional until the final protocol defines stratification.
+            Search and inspect pseudonymous enrolled participants by lifecycle,
+            allocation, condition, site and enrollment date. Applicant contact
+            details remain separated from this workspace.
           </p>
         </div>
-        <span className="status-pill">Step 1C.2</span>
+        <span className="status-pill">Step 1C.3</span>
       </div>
 
       {message && <div className="alert">{message}</div>}
+      {loadError && <div className="alert error">{loadError}</div>}
 
       <div className="metric-grid">
         <Metric label="Total participants" value={metrics?.participants ?? 0} />
@@ -817,23 +971,121 @@ function ParticipantsPage({
       <section className="panel">
         <div className="panel-heading-row">
           <div>
+            <p className="eyebrow">Participant filters</p>
+            <h2>Find a participant</h2>
+          </div>
+          <button type="button" className="secondary compact-action" onClick={clearFilters}>
+            Clear filters
+          </button>
+        </div>
+        <div className="participant-filter-grid">
+          <label className="participant-search-field">
+            Search participant code or ID
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="P-000001"
+            />
+          </label>
+          <label>
+            Lifecycle
+            <select value={lifecycleFilter} onChange={(event) => setLifecycleFilter(event.target.value)}>
+              <option value="all">All lifecycle statuses</option>
+              <option value="enrolled">Enrolled</option>
+              <option value="completed">Completed</option>
+              <option value="withdrawn">Withdrawn</option>
+            </select>
+          </label>
+          <label>
+            Allocation
+            <select value={allocationFilter} onChange={(event) => setAllocationFilter(event.target.value)}>
+              <option value="all">All allocation statuses</option>
+              <option value="not_allocated">Not allocated</option>
+              <option value="allocated">Allocated</option>
+            </select>
+          </label>
+          <label>
+            Assigned condition
+            <select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)}>
+              <option value="all">All conditions</option>
+              <option value="HumorBot">HumorBot</option>
+              <option value="STARCASM">STARCASM</option>
+              <option value="Control">Control</option>
+            </select>
+          </label>
+          <label>
+            Study site
+            <select value={siteFilter} onChange={(event) => setSiteFilter(event.target.value)}>
+              <option value="all">All sites</option>
+              <option value="none">No site</option>
+              {info?.sites.map((site) => (
+                <option key={site.id} value={site.id}>{site.code} · {site.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Enrolled from
+            <input type="date" value={enrolledFrom} onChange={(event) => setEnrolledFrom(event.target.value)} />
+          </label>
+          <label>
+            Enrolled to
+            <input type="date" value={enrolledTo} onChange={(event) => setEnrolledTo(event.target.value)} />
+          </label>
+          <label>
+            Sort
+            <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
+              <option value="enrolled_desc">Newest enrollment</option>
+              <option value="enrolled_asc">Oldest enrollment</option>
+              <option value="participant_code">Participant code</option>
+            </select>
+          </label>
+        </div>
+        {invalidDateRange && (
+          <div className="alert error participant-filter-error">
+            Enrolled from must be on or before Enrolled to.
+          </div>
+        )}
+      </section>
+
+      <div className="participant-workspace">
+      <section className="panel participant-results-panel">
+        <div className="panel-heading-row">
+          <div>
             <p className="eyebrow">Participant queue</p>
             <h2>Enrolled participants</h2>
           </div>
-          <span className="tag">{participants.length} total</span>
+          <span className="tag">{filteredParticipants.length} matching · {participants.length} total</span>
         </div>
+        {loading && (
+          <div className="participant-state" role="status">
+            <strong>Refreshing participant data…</strong>
+            <span>The current results will remain visible while the latest records load.</span>
+          </div>
+        )}
         <div className="list participant-list">
-          {participants.map((participant) => (
-            <div className="participant-row" key={participant.id}>
+          {pagedParticipants.map((participant) => (
+            <div
+              className={`participant-row ${selectedParticipantId === participant.id ? "selected" : ""}`}
+              key={participant.id}
+            >
               <div>
                 <strong>{participant.participant_code}</strong>
                 <span>{siteName(participant.site_id)}</span>
+                <small>Enrolled {formatDate(participant.enrolled_at)}</small>
                 {participant.study_group && <small>Study group: {participant.study_group}</small>}
               </div>
               <div className="participant-statuses">
                 <span className="tag recruitment-eligible">{participant.lifecycle_status}</span>
                 <span className="tag">{participant.allocation_status.replaceAll("_", " ")}</span>
                 {participant.study_group && <span className="tag">{participant.study_group}</span>}
+                <button
+                  type="button"
+                  className="secondary compact-action"
+                  onClick={() => setSelectedParticipantId(participant.id)}
+                >
+                  View details
+                </button>
                 {participant.allocation_status === "not_allocated" && allowAllocate && (
                   <button
                     type="button"
@@ -847,11 +1099,92 @@ function ParticipantsPage({
               </div>
             </div>
           ))}
-          {!participants.length && (
-            <p className="muted">No participants have been enrolled yet.</p>
+          {!loading && !participants.length && (
+            <div className="participant-state empty-state">
+              <strong>No participants enrolled</strong>
+              <span>Selected applicants will appear here after enrollment.</span>
+            </div>
+          )}
+          {!loading && !invalidDateRange && participants.length > 0 && !filteredParticipants.length && (
+            <div className="participant-state empty-state">
+              <strong>No participants match these filters</strong>
+              <span>Clear or adjust the filters to see other pseudonymous records.</span>
+            </div>
           )}
         </div>
+        {filteredParticipants.length > pageSize && (
+          <div className="pagination-row">
+            <button
+              type="button"
+              className="secondary compact-action"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            >
+              Previous
+            </button>
+            <span>Page {currentPage} of {totalPages}</span>
+            <button
+              type="button"
+              className="secondary compact-action"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </section>
+
+      <section className="panel participant-detail-panel">
+        <p className="eyebrow">Participant detail</p>
+        {!selectedParticipant ? (
+          <div className="participant-state empty-state">
+            <strong>Select a participant</strong>
+            <span>Use View details to inspect the pseudonymous participant record.</span>
+          </div>
+        ) : (
+          <>
+            <div className="participant-detail-heading">
+              <div>
+                <h2>{selectedParticipant.participant_code}</h2>
+                <p className="tiny">Pseudonymous research identity</p>
+              </div>
+              <span className="tag recruitment-eligible">{selectedParticipant.lifecycle_status}</span>
+            </div>
+            <dl className="detail-grid participant-detail-grid">
+              <div><dt>Participant ID</dt><dd>{selectedParticipant.id}</dd></div>
+              <div><dt>Application reference</dt><dd>{selectedParticipant.application_id}</dd></div>
+              <div><dt>Study site</dt><dd>{siteName(selectedParticipant.site_id)}</dd></div>
+              <div><dt>Enrolled</dt><dd>{formatDate(selectedParticipant.enrolled_at)}</dd></div>
+              <div><dt>Lifecycle status</dt><dd>{selectedParticipant.lifecycle_status}</dd></div>
+              <div><dt>Allocation status</dt><dd>{selectedParticipant.allocation_status.replaceAll("_", " ")}</dd></div>
+              <div><dt>Assigned condition</dt><dd>{selectedParticipant.study_group || "Not allocated"}</dd></div>
+              <div>
+                <dt>Participant account</dt>
+                <dd>{selectedParticipant.user_id ? "Linked" : "Not linked · planned for Step 1C.4"}</dd>
+              </div>
+            </dl>
+
+            <div className="allocation-detail-block">
+              <strong>Allocation record</strong>
+              {selectedParticipant.allocation_status !== "allocated" && (
+                <p className="tiny">No allocation record exists for this participant.</p>
+              )}
+              {detailLoading && <p className="tiny">Loading allocation details…</p>}
+              {detailError && <div className="alert error">{detailError}</div>}
+              {selectedAllocation && (
+                <dl className="detail-grid participant-detail-grid">
+                  <div><dt>Method</dt><dd>{selectedAllocation.method.replaceAll("_", " ")}</dd></div>
+                  <div><dt>Algorithm version</dt><dd>{selectedAllocation.algorithm_version}</dd></div>
+                  <div><dt>Allocated at</dt><dd>{formatDate(selectedAllocation.allocated_at)}</dd></div>
+                  <div><dt>Immutable record ID</dt><dd>{selectedAllocation.id}</dd></div>
+                </dl>
+              )}
+            </div>
+          </>
+        )}
+      </section>
+      </div>
     </>
   );
 }
@@ -1286,6 +1619,8 @@ export default function App() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [participantMetrics, setParticipantMetrics] = useState<ParticipantMetrics | null>(null);
   const [allocationSummary, setAllocationSummary] = useState<AllocationSummary | null>(null);
+  const [platformLoading, setPlatformLoading] = useState(false);
+  const [platformError, setPlatformError] = useState("");
 
   function clearProjectState() {
     setProjects([]);
@@ -1316,7 +1651,7 @@ export default function App() {
     setAllocationSummary(null);
   }
 
-  async function loadAll(projectId?: string) {
+  async function loadAllData(projectId?: string) {
     if (!user) return;
 
     if (canReadProjects(user)) {
@@ -1394,6 +1729,20 @@ export default function App() {
       setAudit(auditRows);
     } else {
       clearAdminState();
+    }
+  }
+
+  async function loadAll(projectId?: string) {
+    setPlatformLoading(true);
+    setPlatformError("");
+    try {
+      await loadAllData(projectId);
+    } catch (err) {
+      setPlatformError(
+        err instanceof Error ? err.message : "Unable to load the latest platform data.",
+      );
+    } finally {
+      setPlatformLoading(false);
     }
   }
 
@@ -1544,6 +1893,8 @@ export default function App() {
             allocationSummary={allocationSummary}
             info={recruitmentInfo}
             allowAllocate={canAllocate(user)}
+            loading={platformLoading}
+            loadError={platformError}
             reload={loadAll}
           />
         )}

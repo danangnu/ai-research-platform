@@ -14,7 +14,7 @@ function Fail([string] $Message) { Write-Host "FAIL: $Message" -ForegroundColor 
 
 try {
     $health = Invoke-RestMethod -Uri "$ApiUrl/health"
-    if ($health.version -ne "0.3.1-step1c2") { Fail "Unexpected API version: $($health.version)" }
+    if ($health.version -notin @("0.3.1-step1c2", "0.4.0-step1c3")) { Fail "Unexpected API version: $($health.version)" }
     Pass "Step 1C.2 API version"
 
     $loginBody = @{ email = $AdminEmail; password = $AdminPassword } | ConvertTo-Json

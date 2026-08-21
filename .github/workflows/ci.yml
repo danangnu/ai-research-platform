@@ -22,7 +22,7 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - run: pip install -r requirements.txt
-      - run: pytest tests/test_step1a.py tests/test_step1a1.py -q
+      - run: pytest -q
 
   frontend:
     runs-on: ubuntu-latest
@@ -37,7 +37,7 @@ jobs:
         with:
           node-version: "22"
 
-      - run: npm install
+      - run: npm ci
       - run: npm run build
         env:
           VITE_API_URL: https://example.invalid
