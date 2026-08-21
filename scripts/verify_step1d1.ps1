@@ -204,14 +204,27 @@ try {
     if ([int] $afterAllocation.allocated -ne [int] $beforeAllocation.allocated) { Fail "Protocol verification changed allocation counts" }
     Pass "Accepted Step 1C allocation boundary preserved"
 
-    $audit = @(Invoke-RestMethod -Uri "$ApiUrl/api/admin/audit?limit=100" -Headers $refreshHeaders)
+    # Windows PowerShell 5.1 can preserve an Invoke-RestMethod JSON array as a
+    # single nested pipeline object. Flatten it explicitly before filtering so
+    # member enumeration cannot make every audit event appear to match.
+    $auditResponse = Invoke-RestMethod -Uri "$ApiUrl/api/admin/audit?limit=100" -Headers $refreshHeaders
+    $audit = @()
+    foreach ($auditEvent in $auditResponse) {
+        if ($auditEvent -is [System.Array]) {
+            foreach ($nestedAuditEvent in $auditEvent) { $audit += $nestedAuditEvent }
+        }
+        else {
+            $audit += $auditEvent
+        }
+    }
     $protocolAudit = @($audit | Where-Object { $_.entity_id -eq $draft.id })
     foreach ($expectedAction in @("protocol.created", "protocol.updated", "protocol.approved")) {
         if (@($protocolAudit | Where-Object { $_.action -eq $expectedAction }).Count -ne 1) {
             Fail "Expected one $expectedAction audit event"
         }
     }
-    $approvalAudit = $protocolAudit | Where-Object { $_.action -eq "protocol.approved" } | Select-Object -First 1
+    $approvalAuditMatches = @($protocolAudit | Where-Object { $_.action -eq "protocol.approved" })
+    $approvalAudit = $approvalAuditMatches[0]
     $approvalAuditEntityId = [string] $approvalAudit.entity_id
     $approvalAuditActorId = [string] $approvalAudit.actor_user_id
     $approvalAuditCreatedAt = [string] $approvalAudit.created_at
