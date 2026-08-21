@@ -25,6 +25,6 @@
     "backend_test": "backend/tests/test_step1d1.py",
     "deployment_script": "scripts/verify_step1d1.ps1",
     "acceptance_guide": "STEP1D1_ACCEPTANCE.md",
-    "live_audit_check": "unique action, entity type and entity id correlation; configuration hash is independently checked during validation, approval and fresh-session persistence"
+    "live_audit_check": "unique action, protocol id, approving user and timestamp correlation; configuration hash is independently checked during validation, approval and fresh-session persistence"
   }
 }

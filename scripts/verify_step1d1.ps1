@@ -212,8 +212,18 @@ try {
         }
     }
     $approvalAudit = $protocolAudit | Where-Object { $_.action -eq "protocol.approved" } | Select-Object -First 1
-    if (-not $approvalAudit.id -or $approvalAudit.entity_type -ne "study_protocol" -or $approvalAudit.entity_id -ne $draft.id) {
-        Fail "Protocol approval audit correlation is incorrect"
+    $approvalAuditEntityId = [string] $approvalAudit.entity_id
+    $approvalAuditActorId = [string] $approvalAudit.actor_user_id
+    $approvalAuditCreatedAt = [string] $approvalAudit.created_at
+    $approvedProtocolId = [string] $draft.id
+    $approvedById = [string] $approved.approved_by_id
+    if (
+        $null -eq $approvalAudit -or
+        $approvalAuditEntityId -ne $approvedProtocolId -or
+        $approvalAuditActorId -ne $approvedById -or
+        [string]::IsNullOrWhiteSpace($approvalAuditCreatedAt)
+    ) {
+        Fail "Protocol approval audit correlation is incorrect (entity_id=$approvalAuditEntityId; actor_user_id=$approvalAuditActorId; approved_by_id=$approvedById; created_at=$approvalAuditCreatedAt)"
     }
     Pass "Immutable protocol audit trail"
 
