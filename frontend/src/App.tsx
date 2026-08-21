@@ -5,6 +5,10 @@ import {
   login,
   Milestone,
   Project,
+  RecruitmentApplication,
+  RecruitmentMetrics,
+  RecruitmentPublicInfo,
+  recruitmentApi,
   Risk,
   setToken,
   StudySite,
@@ -57,6 +61,12 @@ const ADMIN_ROLES = new Set([
   "RESEARCH_LEAD",
 ]);
 
+const RECRUITMENT_ROLES = new Set([
+  "PROJECT_ADMIN",
+  "RESEARCH_LEAD",
+  "RESEARCH_ASSISTANT",
+]);
+
 function hasAnyRole(user: User, allowed: Set<string>) {
   return user.roles.some((role) => allowed.has(role));
 }
@@ -77,16 +87,19 @@ function canAdminister(user: User) {
   return hasAnyRole(user, ADMIN_ROLES);
 }
 
-function visibleNavigation(user: User) {
-  if (!canReadProjects(user)) {
-    return NAV.filter((item) =>
-      item.page === "overview" || item.page === "study"
-    );
-  }
+function canRecruit(user: User) {
+  return hasAnyRole(user, RECRUITMENT_ROLES);
+}
 
-  return NAV.filter((item) =>
-    item.page !== "admin" || canAdminister(user)
-  );
+function visibleNavigation(user: User) {
+  return NAV.filter((item) => {
+    if (item.page === "overview") return true;
+    if (item.page === "recruitment") return canRecruit(user);
+    if (item.page === "project") return canReadProjects(user);
+    if (item.page === "admin") return canAdminister(user);
+    if (item.page === "study") return true;
+    return canReadProjects(user);
+  });
 }
 
 const DEMO_MODE =
@@ -105,8 +118,10 @@ function DemoBanner() {
 
 function LoginScreen({
   onLogin,
+  onApply,
 }: {
   onLogin: (user: User) => void;
+  onApply: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -137,7 +152,7 @@ function LoginScreen({
         <p className="eyebrow">Research Operations</p>
         <h1>AI Research Study Management Platform</h1>
         <p className="muted">
-          Step 1A · Core foundation, project management and audit
+          Step 1B · Recruitment intake and eligibility review
         </p>
 
         <form onSubmit={submit} className="stack">
@@ -168,9 +183,15 @@ function LoginScreen({
           </button>
         </form>
 
+        <div className="login-divider"><span>or</span></div>
+        <button className="apply-button" type="button" onClick={onApply}>
+          Open recruitment application
+        </button>
+
         <p className="tiny">
           Use the demo credentials supplied by the project administrator.
-          Do not enter participant or health information in this demo.
+          Recruitment is also synthetic/demo-only until approved protocol,
+          consent, privacy and governance requirements are configured.
         </p>
       </div>
     </div>
@@ -195,10 +216,12 @@ function Overview({
   projects,
   tasks,
   risks,
+  recruitmentMetrics,
 }: {
   projects: Project[];
   tasks: StudyTask[];
   risks: Risk[];
+  recruitmentMetrics: RecruitmentMetrics | null;
 }) {
   const openTasks = tasks.filter((task) => task.status !== "completed").length;
   const openRisks = risks.filter((risk) => risk.status === "open").length;
@@ -214,14 +237,14 @@ function Overview({
             STARCASM and control-group study.
           </p>
         </div>
-        <span className="status-pill">Step 1A</span>
+        <span className="status-pill">Step 1B</span>
       </div>
 
       <div className="metric-grid">
         <Metric label="Projects" value={projects.length} />
         <Metric label="Open tasks" value={openTasks} />
         <Metric label="Open risks" value={openRisks} />
-        <Metric label="Recruitment target" value="600" />
+        <Metric label="Applications" value={recruitmentMetrics?.applications ?? 0} />
       </div>
 
       <div className="two-col">
@@ -232,20 +255,20 @@ function Overview({
           <GroupBar label="STARCASM" current={0} target={200} />
           <GroupBar label="Control" current={0} target={200} />
           <p className="tiny">
-            Counts remain zero until the later recruitment/selection workflow
+            Group counts remain zero until the later selection/allocation workflow
             is approved and implemented.
           </p>
         </section>
 
         <section className="panel">
           <p className="eyebrow">Current stage</p>
-          <h2>Foundation acceptance</h2>
+          <h2>Recruitment intake & review</h2>
           <ul className="checklist">
-            <li>Authentication and RBAC</li>
-            <li>Project / milestone / task tracking</li>
-            <li>Risk register</li>
-            <li>Study-site foundation</li>
-            <li>Administrative audit trail</li>
+            <li>Step 1A foundation accepted</li>
+            <li>Public synthetic application intake</li>
+            <li>Consent-to-screen capture</li>
+            <li>Applicant reference issuance</li>
+            <li>Eligibility-review workflow</li>
           </ul>
         </section>
       </div>
@@ -327,45 +350,278 @@ function GroupBar({
   );
 }
 
-function Recruitment({ sites }: { sites: StudySite[] }) {
+function PublicRecruitment({ onBack }: { onBack: () => void }) {
+  const [info, setInfo] = useState<RecruitmentPublicInfo | null>(null);
+  const [message, setMessage] = useState("");
+  const [reference, setReference] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    recruitmentApi.publicInfo()
+      .then(setInfo)
+      .catch((err) => setMessage(err instanceof Error ? err.message : "Unable to load recruitment information."));
+  }, []);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    setBusy(true);
+    setMessage("");
+
+    try {
+      const application = await recruitmentApi.submitApplication({
+        preferred_name: data.get("preferred_name"),
+        contact_email: data.get("contact_email"),
+        site_id: data.get("site_id") || null,
+        recruitment_source: data.get("recruitment_source") || "",
+        consent_to_screen: data.get("consent_to_screen") === "on",
+        privacy_acknowledged: data.get("privacy_acknowledged") === "on",
+        screening_answers: {
+          demo_online_access: data.get("demo_online_access") === "true",
+          demo_instruction_language: data.get("demo_instruction_language") === "true",
+          demo_schedule_availability: data.get("demo_schedule_availability") === "true",
+        },
+      });
+      form.reset();
+      setReference(application.reference_code);
+      setMessage("Synthetic demo application submitted.");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Unable to submit application.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="public-recruitment-shell">
+      <DemoBanner />
+      <main className="public-recruitment-content">
+        <button type="button" className="back-link" onClick={onBack}>← Staff sign in</button>
+        <div className="page-heading">
+          <div>
+            <p className="eyebrow">Public recruitment · Step 1B</p>
+            <h1>{info?.study_name || "Research study recruitment"}</h1>
+            <p className="muted">
+              Submit a synthetic screening application and receive an applicant reference.
+              This demo does not enroll or allocate a participant.
+            </p>
+          </div>
+          <span className="status-pill">Recruitment demo</span>
+        </div>
+
+        {!info ? (
+          <section className="panel"><p className="muted">Loading recruitment information…</p></section>
+        ) : !info.recruitment_open ? (
+          <section className="panel"><h2>Recruitment intake is closed</h2></section>
+        ) : (
+          <div className="two-col public-recruitment-grid">
+            <section className="panel">
+              <p className="eyebrow">Study information</p>
+              <h2>Recruitment target</h2>
+              <p className="muted">
+                Target: {info.target_total} participants across HumorBot, STARCASM and Control.
+              </p>
+              <div className="lifecycle compact-lifecycle">
+                <span>Application</span><b>→</b><span>Screening</span><b>→</b>
+                <span>Eligibility review</span><b>→</b><span>Later selection</span>
+              </div>
+              <div className="protocol-warning">
+                <strong>Protocol gate</strong>
+                <p>
+                  Eligibility/exclusion rules and approved participant-facing consent text are not
+                  configured yet. The three screening fields below demonstrate questionnaire plumbing
+                  only and do not automatically determine eligibility.
+                </p>
+              </div>
+            </section>
+
+            <section className="panel">
+              <h2>Screening application</h2>
+              {message && <div className="alert">{message}</div>}
+              {reference && (
+                <div className="reference-card">
+                  <span>Applicant reference</span>
+                  <strong>{reference}</strong>
+                  <small>Keep this synthetic reference for the demo.</small>
+                </div>
+              )}
+              <form className="compact-form" onSubmit={submit}>
+                <input name="preferred_name" placeholder="Preferred name / demo alias" required />
+                <input name="contact_email" type="email" placeholder="Synthetic contact email" required />
+                <select name="site_id" defaultValue="">
+                  <option value="">No study site selected</option>
+                  {info.sites.map((site) => (
+                    <option key={site.id} value={site.id}>{site.code} · {site.name}</option>
+                  ))}
+                </select>
+                <input name="recruitment_source" placeholder="Recruitment source (optional)" />
+
+                <fieldset className="screening-fieldset">
+                  <legend>Demo screening questionnaire — not approved eligibility criteria</legend>
+                  <label>Can you access the online study environment?
+                    <select name="demo_online_access" required defaultValue="">
+                      <option value="" disabled>Select</option><option value="true">Yes</option><option value="false">No</option>
+                    </select>
+                  </label>
+                  <label>Can you follow the study instructions in English?
+                    <select name="demo_instruction_language" required defaultValue="">
+                      <option value="" disabled>Select</option><option value="true">Yes</option><option value="false">No</option>
+                    </select>
+                  </label>
+                  <label>Can you attend scheduled study activities?
+                    <select name="demo_schedule_availability" required defaultValue="">
+                      <option value="" disabled>Select</option><option value="true">Yes</option><option value="false">No</option>
+                    </select>
+                  </label>
+                </fieldset>
+
+                <label className="check-row">
+                  <input type="checkbox" name="consent_to_screen" required />
+                  <span>I acknowledge the demo consent-to-screen statement. It is not approved research consent.</span>
+                </label>
+                <label className="check-row">
+                  <input type="checkbox" name="privacy_acknowledged" required />
+                  <span>I understand this environment must use synthetic data only.</span>
+                </label>
+                <button className="primary" disabled={busy}>{busy ? "Submitting…" : "Submit screening application"}</button>
+              </form>
+            </section>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function Recruitment({
+  info,
+  applications,
+  metrics,
+  reload,
+}: {
+  info: RecruitmentPublicInfo | null;
+  applications: RecruitmentApplication[];
+  metrics: RecruitmentMetrics | null;
+  reload: () => Promise<void>;
+}) {
+  const [selectedId, setSelectedId] = useState("");
+  const [message, setMessage] = useState("");
+  const selected = applications.find((item) => item.id === selectedId) || applications[0] || null;
+
+  useEffect(() => {
+    if (!selectedId && applications.length) setSelectedId(applications[0].id);
+    if (selectedId && !applications.some((item) => item.id === selectedId)) {
+      setSelectedId(applications[0]?.id || "");
+    }
+  }, [applications, selectedId]);
+
+  async function review(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+      await recruitmentApi.review(selected.id, {
+        status: data.get("status"),
+        review_note: data.get("review_note") || "",
+      });
+      setMessage(`Review saved for ${selected.reference_code}.`);
+      await reload();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Unable to save eligibility review.");
+    }
+  }
+
+  const siteName = (siteId: string | null) => {
+    if (!siteId) return "No site";
+    return info?.sites.find((site) => site.id === siteId)?.name || "Unknown site";
+  };
+
   return (
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Recruitment</p>
-          <h1>Recruitment Foundation</h1>
+          <p className="eyebrow">Recruitment operations</p>
+          <h1>Applications & Eligibility Review</h1>
           <p className="muted">
-            Step 1A establishes study sites and the recruitment module shell.
-            The public questionnaire and applicant workflow arrive in Step 1B.
+            Step 1B separates applicants from enrolled participants. No group allocation or participant account is created here.
           </p>
         </div>
+        <span className="status-pill">Step 1B</span>
       </div>
+
+      {message && <div className="alert">{message}</div>}
 
       <div className="metric-grid">
-        <Metric label="Applications" value={0} />
-        <Metric label="Eligible" value={0} />
-        <Metric label="Selected" value={0} />
-        <Metric label="Study sites" value={sites.length} />
+        <Metric label="Applications" value={metrics?.applications ?? 0} />
+        <Metric label="Submitted" value={metrics?.submitted ?? 0} />
+        <Metric label="Needs review" value={metrics?.needs_review ?? 0} />
+        <Metric label="Eligible" value={metrics?.eligible ?? 0} />
       </div>
 
-      <section className="panel">
-        <h2>Recruitment lifecycle</h2>
-        <div className="lifecycle">
-          <span>Applicant</span>
-          <b>→</b>
-          <span>Screening</span>
-          <b>→</b>
-          <span>Eligibility review</span>
-          <b>→</b>
-          <span>Selection</span>
-          <b>→</b>
-          <span>Participant</span>
-        </div>
-        <p className="muted">
-          Step 1A intentionally prevents us from conflating an applicant with
-          a study participant before eligibility and selection exist.
-        </p>
-      </section>
+      <div className="two-col recruitment-review-grid">
+        <section className="panel">
+          <div className="panel-heading-row">
+            <div><p className="eyebrow">Applicant queue</p><h2>Recruitment applications</h2></div>
+            <span className="tag">{applications.length} total</span>
+          </div>
+          <div className="list recruitment-list">
+            {applications.map((application) => (
+              <button
+                type="button"
+                className={`application-row ${selected?.id === application.id ? "selected" : ""}`}
+                key={application.id}
+                onClick={() => setSelectedId(application.id)}
+              >
+                <div>
+                  <strong>{application.reference_code}</strong>
+                  <span>{application.preferred_name} · {siteName(application.site_id)}</span>
+                </div>
+                <span className={`tag recruitment-${application.status}`}>{application.status.replaceAll("_", " ")}</span>
+              </button>
+            ))}
+            {!applications.length && <p className="muted">No recruitment applications yet.</p>}
+          </div>
+        </section>
+
+        <section className="panel">
+          <p className="eyebrow">Eligibility review</p>
+          {!selected ? <p className="muted">Select an application to review.</p> : (
+            <>
+              <h2>{selected.reference_code}</h2>
+              <dl className="detail-grid">
+                <div><dt>Demo alias</dt><dd>{selected.preferred_name}</dd></div>
+                <div><dt>Contact</dt><dd>{selected.contact_email}</dd></div>
+                <div><dt>Site</dt><dd>{siteName(selected.site_id)}</dd></div>
+                <div><dt>Submitted</dt><dd>{new Date(selected.submitted_at).toLocaleString()}</dd></div>
+                <div><dt>Consent version</dt><dd>{selected.consent_version}</dd></div>
+                <div><dt>Current status</dt><dd>{selected.status.replaceAll("_", " ")}</dd></div>
+              </dl>
+              <div className="screening-summary">
+                <strong>Demo questionnaire responses</strong>
+                {Object.entries(selected.screening_answers).map(([key, value]) => (
+                  <div key={key}><span>{key.replaceAll("demo_", "").replaceAll("_", " ")}</span><b>{value ? "Yes" : "No"}</b></div>
+                ))}
+              </div>
+              <div className="protocol-warning">
+                <strong>No automatic eligibility rule</strong>
+                <p>Final inclusion/exclusion criteria must come from the approved research protocol. This review records workflow status only.</p>
+              </div>
+              <form className="compact-form" onSubmit={review} key={`${selected.id}-${selected.updated_at}`}>
+                <select name="status" defaultValue={selected.status === "submitted" ? "under_review" : selected.status}>
+                  <option value="under_review">Under review</option>
+                  <option value="needs_review">Needs review</option>
+                  <option value="eligible">Eligible</option>
+                  <option value="ineligible">Ineligible</option>
+                </select>
+                <textarea name="review_note" rows={3} defaultValue={selected.review_note} placeholder="Reviewer note (synthetic demo only)" />
+                <button className="primary">Save eligibility review</button>
+              </form>
+            </>
+          )}
+        </section>
+      </div>
     </>
   );
 }
@@ -784,6 +1040,7 @@ function AdminPage({
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [page, setPage] = useState<Page>("overview");
+  const [publicApply, setPublicApply] = useState(() => window.location.hash === "#apply");
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -792,6 +1049,9 @@ export default function App() {
   const [risks, setRisks] = useState<Risk[]>([]);
   const [sites, setSites] = useState<StudySite[]>([]);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
+  const [recruitmentInfo, setRecruitmentInfo] = useState<RecruitmentPublicInfo | null>(null);
+  const [recruitmentApplications, setRecruitmentApplications] = useState<RecruitmentApplication[]>([]);
+  const [recruitmentMetrics, setRecruitmentMetrics] = useState<RecruitmentMetrics | null>(null);
 
   function clearProjectState() {
     setProjects([]);
@@ -806,9 +1066,16 @@ export default function App() {
     setAudit([]);
   }
 
+  function clearRecruitmentState() {
+    setRecruitmentInfo(null);
+    setRecruitmentApplications([]);
+    setRecruitmentMetrics(null);
+  }
+
   function clearRoleScopedState() {
     clearProjectState();
     clearAdminState();
+    clearRecruitmentState();
   }
 
   async function loadAll(projectId?: string) {
@@ -849,6 +1116,19 @@ export default function App() {
       clearProjectState();
     }
 
+    if (canRecruit(user)) {
+      const [infoRow, applicationRows, metricRow] = await Promise.all([
+        recruitmentApi.publicInfo(),
+        recruitmentApi.applications(),
+        recruitmentApi.metrics(),
+      ]);
+      setRecruitmentInfo(infoRow);
+      setRecruitmentApplications(applicationRows);
+      setRecruitmentMetrics(metricRow);
+    } else {
+      clearRecruitmentState();
+    }
+
     if (canAdminister(user)) {
       const [siteRows, auditRows] = await Promise.all([
         api.sites(),
@@ -880,6 +1160,10 @@ export default function App() {
       clearAdminState();
     }
 
+    if (!canRecruit(user)) {
+      clearRecruitmentState();
+    }
+
     loadAll().catch(console.error);
   }, [user, selectedProject?.id]);
 
@@ -906,12 +1190,27 @@ export default function App() {
   }
 
   if (!user) {
+    if (publicApply) {
+      return (
+        <PublicRecruitment
+          onBack={() => {
+            window.location.hash = "";
+            setPublicApply(false);
+          }}
+        />
+      );
+    }
+
     return (
       <LoginScreen
         onLogin={(nextUser) => {
           clearRoleScopedState();
           setPage("overview");
           setUser(nextUser);
+        }}
+        onApply={() => {
+          window.location.hash = "apply";
+          setPublicApply(true);
         }}
       />
     );
@@ -960,12 +1259,24 @@ export default function App() {
       <main className="content">
         {page === "overview" &&
           (canReadProjects(user) ? (
-            <Overview projects={projects} tasks={tasks} risks={risks} />
+            <Overview
+              projects={projects}
+              tasks={tasks}
+              risks={risks}
+              recruitmentMetrics={recruitmentMetrics}
+            />
           ) : (
             <LimitedOverview user={user} />
           ))}
 
-        {page === "recruitment" && <Recruitment sites={sites} />}
+        {page === "recruitment" && canRecruit(user) && (
+          <Recruitment
+            info={recruitmentInfo}
+            applications={recruitmentApplications}
+            metrics={recruitmentMetrics}
+            reload={loadAll}
+          />
+        )}
 
         {page === "project" && canReadProjects(user) && (
           <ProjectPage

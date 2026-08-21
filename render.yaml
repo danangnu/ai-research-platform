@@ -31,6 +31,10 @@ services:
         sync: false
       - key: DEMO_PARTICIPANT_FULL_NAME
         value: Demo Participant
+      - key: RECRUITMENT_OPEN
+        value: "true"
+      - key: SCREENING_CONSENT_VERSION
+        value: DEMO-STEP1B-v1
       - key: PYTHON_VERSION
         value: "3.12.8"
 

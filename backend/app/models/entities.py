@@ -137,6 +137,25 @@ class StudySite(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
 
 
+class RecruitmentApplication(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "recruitment_applications"
+
+    reference_code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
+    site_id: Mapped[str | None] = mapped_column(ForeignKey("study_sites.id", ondelete="SET NULL"), nullable=True, index=True)
+    preferred_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    contact_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    recruitment_source: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    consent_to_screen: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    privacy_acknowledged: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    consent_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    screening_answers: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="submitted", nullable=False, index=True)
+    review_note: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    reviewed_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False, index=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class AuditEvent(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "audit_events"
 

@@ -8,6 +8,7 @@ from app.models.entities import (
     Risk,
     StudySite,
     AuditEvent,
+    RecruitmentApplication,
     user_roles,
 )
 
@@ -21,5 +22,6 @@ __all__ = [
     "Risk",
     "StudySite",
     "AuditEvent",
+    "RecruitmentApplication",
     "user_roles",
 ]

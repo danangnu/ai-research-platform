@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0-step1b",
+  "step": "1B",
+  "scope": "Recruitment intake, consent-to-screen capture, screening questionnaire plumbing, applicant reference, staff eligibility review and recruitment RBAC",
+  "protocol_boundary": "No approved inclusion/exclusion criteria are hard-coded; no automatic eligibility decision, participant enrollment or study-condition allocation is performed.",
+  "backend_tests": 13,
+  "new_api_groups": [
+    "/api/public/recruitment",
+    "/api/recruitment"
+  ],
+  "migration": "20260821_0002_step1b_recruitment.py"
+}

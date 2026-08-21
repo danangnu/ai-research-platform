@@ -37,3 +37,12 @@ ADMIN_ROLES = {
     PROJECT_ADMIN,
     RESEARCH_LEAD,
 }
+
+
+# Applicant-level recruitment data is intentionally separated from AI/ML
+# engineering access. These roles operate the recruitment workflow.
+RECRUITMENT_ROLES = {
+    PROJECT_ADMIN,
+    RESEARCH_LEAD,
+    RESEARCH_ASSISTANT,
+}

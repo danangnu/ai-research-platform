@@ -162,3 +162,64 @@ class AuditEventOut(ORMModel):
     details: dict[str, Any]
     ip_address: str | None
     created_at: datetime
+
+
+class RecruitmentSiteOut(ORMModel):
+    id: str
+    code: str
+    name: str
+
+
+class RecruitmentPublicInfoOut(BaseModel):
+    study_name: str
+    recruitment_open: bool
+    target_total: int
+    target_groups: dict[str, int]
+    consent_version: str
+    protocol_criteria_configured: bool
+    demo_mode: bool
+    sites: list[RecruitmentSiteOut]
+
+
+class RecruitmentApplicationCreate(BaseModel):
+    preferred_name: str = Field(min_length=2, max_length=120)
+    contact_email: EmailStr
+    site_id: str | None = None
+    recruitment_source: str = Field(default="", max_length=120)
+    consent_to_screen: bool
+    privacy_acknowledged: bool
+    screening_answers: dict[str, bool] = Field(default_factory=dict)
+
+
+class RecruitmentApplicationOut(ORMModel):
+    id: str
+    reference_code: str
+    site_id: str | None
+    preferred_name: str
+    contact_email: EmailStr
+    recruitment_source: str
+    consent_to_screen: bool
+    privacy_acknowledged: bool
+    consent_version: str
+    screening_answers: dict[str, Any]
+    status: str
+    review_note: str
+    reviewed_by_id: str | None
+    submitted_at: datetime
+    reviewed_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class RecruitmentApplicationReview(BaseModel):
+    status: str = Field(min_length=2, max_length=32)
+    review_note: str = Field(default="", max_length=2000)
+
+
+class RecruitmentMetricsOut(BaseModel):
+    applications: int
+    submitted: int
+    under_review: int
+    needs_review: int
+    eligible: int
+    ineligible: int

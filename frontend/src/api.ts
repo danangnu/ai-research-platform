@@ -217,3 +217,78 @@ export const api = {
   audit: () =>
     request<AuditEvent[]>("/api/admin/audit?limit=100"),
 };
+
+export type RecruitmentSite = {
+  id: string;
+  code: string;
+  name: string;
+};
+
+export type RecruitmentPublicInfo = {
+  study_name: string;
+  recruitment_open: boolean;
+  target_total: number;
+  target_groups: Record<string, number>;
+  consent_version: string;
+  protocol_criteria_configured: boolean;
+  demo_mode: boolean;
+  sites: RecruitmentSite[];
+};
+
+export type RecruitmentApplication = {
+  id: string;
+  reference_code: string;
+  site_id: string | null;
+  preferred_name: string;
+  contact_email: string;
+  recruitment_source: string;
+  consent_to_screen: boolean;
+  privacy_acknowledged: boolean;
+  consent_version: string;
+  screening_answers: Record<string, boolean>;
+  status: string;
+  review_note: string;
+  reviewed_by_id: string | null;
+  submitted_at: string;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecruitmentMetrics = {
+  applications: number;
+  submitted: number;
+  under_review: number;
+  needs_review: number;
+  eligible: number;
+  ineligible: number;
+};
+
+export const recruitmentApi = {
+  publicInfo: () =>
+    request<RecruitmentPublicInfo>("/api/public/recruitment/info"),
+
+  submitApplication: (body: Record<string, unknown>) =>
+    request<RecruitmentApplication>("/api/public/recruitment/applications", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  applications: () =>
+    request<RecruitmentApplication[]>("/api/recruitment/applications"),
+
+  metrics: () =>
+    request<RecruitmentMetrics>("/api/recruitment/metrics"),
+
+  review: (
+    applicationId: string,
+    body: Record<string, unknown>,
+  ) =>
+    request<RecruitmentApplication>(
+      `/api/recruitment/applications/${applicationId}/review`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      },
+    ),
+};

@@ -9,6 +9,8 @@ os.environ["DEMO_MODE"] = "true"
 os.environ["DEMO_PARTICIPANT_EMAIL"] = "participant@test.example.com"
 os.environ["DEMO_PARTICIPANT_PASSWORD"] = "ParticipantTest123!"
 os.environ["DEMO_PARTICIPANT_FULL_NAME"] = "Test Participant"
+os.environ["RECRUITMENT_OPEN"] = "true"
+os.environ["SCREENING_CONSENT_VERSION"] = "TEST-STEP1B-v1"
 
 import pytest
 from fastapi.testclient import TestClient

@@ -1,0 +1,230 @@
+from __future__ import annotations
+
+import secrets
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.api.deps import require_roles
+from app.core.config import settings
+from app.core.roles import RECRUITMENT_ROLES
+from app.db.base import utcnow
+from app.db.session import get_db
+from app.models import RecruitmentApplication, StudySite, User
+from app.schemas.common import (
+    RecruitmentApplicationCreate,
+    RecruitmentApplicationOut,
+    RecruitmentApplicationReview,
+    RecruitmentMetricsOut,
+    RecruitmentPublicInfoOut,
+    RecruitmentSiteOut,
+)
+from app.services.audit import write_audit
+
+
+public_router = APIRouter(prefix="/api/public/recruitment", tags=["public recruitment"])
+staff_router = APIRouter(prefix="/api/recruitment", tags=["recruitment"])
+
+ALLOWED_REVIEW_STATUSES = {
+    "submitted",
+    "under_review",
+    "needs_review",
+    "eligible",
+    "ineligible",
+}
+
+
+def _new_reference() -> str:
+    return f"APP-{secrets.token_hex(4).upper()}"
+
+
+def _serialize(application: RecruitmentApplication) -> RecruitmentApplicationOut:
+    return RecruitmentApplicationOut.model_validate(application)
+
+
+@public_router.get("/info", response_model=RecruitmentPublicInfoOut)
+def public_recruitment_info(db: Session = Depends(get_db)):
+    sites = list(
+        db.scalars(
+            select(StudySite)
+            .where(StudySite.status == "active")
+            .order_by(StudySite.name)
+        )
+    )
+    return RecruitmentPublicInfoOut(
+        study_name="HumorBot and STARCASM Research Study",
+        recruitment_open=settings.recruitment_open,
+        target_total=600,
+        target_groups={"HumorBot": 200, "STARCASM": 200, "Control": 200},
+        consent_version=settings.screening_consent_version,
+        protocol_criteria_configured=False,
+        demo_mode=settings.demo_mode,
+        sites=[RecruitmentSiteOut.model_validate(site) for site in sites],
+    )
+
+
+@public_router.post("/applications", response_model=RecruitmentApplicationOut, status_code=201)
+def submit_application(
+    payload: RecruitmentApplicationCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    if not settings.recruitment_open:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Recruitment intake is currently closed.",
+        )
+
+    if not payload.consent_to_screen or not payload.privacy_acknowledged:
+        raise HTTPException(
+            status_code=422,
+            detail="Consent-to-screen and privacy acknowledgement are required.",
+        )
+
+    if payload.site_id:
+        site = db.get(StudySite, payload.site_id)
+        if site is None or site.status != "active":
+            raise HTTPException(status_code=400, detail="Selected study site is not available.")
+
+    normalized_email = payload.contact_email.lower().strip()
+    existing = db.scalar(
+        select(RecruitmentApplication).where(
+            RecruitmentApplication.contact_email == normalized_email,
+            RecruitmentApplication.status != "withdrawn",
+        )
+    )
+    if existing is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="An active application already exists for this email address.",
+        )
+
+    application = RecruitmentApplication(
+        reference_code=_new_reference(),
+        site_id=payload.site_id,
+        preferred_name=payload.preferred_name.strip(),
+        contact_email=normalized_email,
+        recruitment_source=payload.recruitment_source.strip(),
+        consent_to_screen=True,
+        privacy_acknowledged=True,
+        consent_version=settings.screening_consent_version,
+        screening_answers=payload.screening_answers,
+        status="submitted",
+        submitted_at=utcnow(),
+    )
+    db.add(application)
+
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Duplicate recruitment application.") from exc
+
+    # Public audit deliberately avoids storing contact details or questionnaire answers.
+    write_audit(
+        db,
+        actor=None,
+        action="recruitment.application_submitted",
+        entity_type="recruitment_application",
+        entity_id=application.id,
+        details={
+            "reference_code": application.reference_code,
+            "site_id": application.site_id,
+            "consent_version": application.consent_version,
+        },
+        ip_address=request.client.host if request.client else None,
+    )
+    db.commit()
+    db.refresh(application)
+    return _serialize(application)
+
+
+@staff_router.get("/applications", response_model=list[RecruitmentApplicationOut])
+def list_applications(
+    application_status: str | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(*RECRUITMENT_ROLES)),
+):
+    statement = select(RecruitmentApplication).order_by(
+        RecruitmentApplication.submitted_at.desc()
+    )
+    if application_status:
+        if application_status not in ALLOWED_REVIEW_STATUSES | {"withdrawn"}:
+            raise HTTPException(status_code=400, detail="Unknown recruitment status.")
+        statement = statement.where(RecruitmentApplication.status == application_status)
+    return list(db.scalars(statement))
+
+
+@staff_router.get("/metrics", response_model=RecruitmentMetricsOut)
+def recruitment_metrics(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(*RECRUITMENT_ROLES)),
+):
+    rows = db.execute(
+        select(RecruitmentApplication.status, func.count(RecruitmentApplication.id))
+        .group_by(RecruitmentApplication.status)
+    ).all()
+    counts = {row[0]: int(row[1]) for row in rows}
+    total = sum(counts.values())
+    return RecruitmentMetricsOut(
+        applications=total,
+        submitted=counts.get("submitted", 0),
+        under_review=counts.get("under_review", 0),
+        needs_review=counts.get("needs_review", 0),
+        eligible=counts.get("eligible", 0),
+        ineligible=counts.get("ineligible", 0),
+    )
+
+
+@staff_router.get("/applications/{application_id}", response_model=RecruitmentApplicationOut)
+def get_application(
+    application_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(*RECRUITMENT_ROLES)),
+):
+    application = db.get(RecruitmentApplication, application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="Recruitment application not found.")
+    return application
+
+
+@staff_router.patch("/applications/{application_id}/review", response_model=RecruitmentApplicationOut)
+def review_application(
+    application_id: str,
+    payload: RecruitmentApplicationReview,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(*RECRUITMENT_ROLES)),
+):
+    if payload.status not in ALLOWED_REVIEW_STATUSES - {"submitted"}:
+        raise HTTPException(status_code=422, detail="Invalid eligibility-review status.")
+
+    application = db.get(RecruitmentApplication, application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="Recruitment application not found.")
+
+    previous_status = application.status
+    application.status = payload.status
+    application.review_note = payload.review_note.strip()
+    application.reviewed_by_id = user.id
+    application.reviewed_at = utcnow()
+
+    write_audit(
+        db,
+        actor=user,
+        action="recruitment.application_reviewed",
+        entity_type="recruitment_application",
+        entity_id=application.id,
+        details={
+            "reference_code": application.reference_code,
+            "previous_status": previous_status,
+            "new_status": application.status,
+        },
+        ip_address=request.client.host if request.client else None,
+    )
+    db.commit()
+    db.refresh(application)
+    return application

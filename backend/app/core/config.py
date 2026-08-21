@@ -19,7 +19,7 @@ def normalize_database_url(value: str) -> str:
 
 class Settings(BaseSettings):
     app_name: str = "AI Research Study Management Platform"
-    app_version: str = "0.1.3-step1a1"
+    app_version: str = "0.2.0-step1b"
     database_url: str = (
         "postgresql+psycopg://research:"
         "research-dev-password@localhost:5432/ai_research"
@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     demo_participant_email: str = ""
     demo_participant_password: str = ""
     demo_participant_full_name: str = "Demo Participant"
+
+    recruitment_open: bool = False
+    screening_consent_version: str = "DEMO-STEP1B-v1"
 
     model_config = SettingsConfigDict(
         env_file=".env",
