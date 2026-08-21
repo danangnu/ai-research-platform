@@ -25,6 +25,12 @@ services:
         value: Project Administrator
       - key: DEMO_MODE
         value: "true"
+      - key: DEMO_PARTICIPANT_EMAIL
+        sync: false
+      - key: DEMO_PARTICIPANT_PASSWORD
+        sync: false
+      - key: DEMO_PARTICIPANT_FULL_NAME
+        value: Demo Participant
       - key: PYTHON_VERSION
         value: "3.12.8"
 

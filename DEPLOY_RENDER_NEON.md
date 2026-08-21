@@ -75,6 +75,8 @@ Set:
 DATABASE_URL=<Neon connection string>
 ADMIN_EMAIL=<dedicated demo administrator email>
 ADMIN_PASSWORD=<strong unique demo password>
+DEMO_PARTICIPANT_EMAIL=<dedicated synthetic participant email>
+DEMO_PARTICIPANT_PASSWORD=<different strong demo password>
 CORS_ORIGINS=https://ai-research-study.onrender.com
 ```
 
@@ -107,7 +109,10 @@ pip install -r requirements.txt && alembic upgrade head
 This applies the Alembic migrations before the new build starts.
 
 The application then seeds the configured administrator at startup if the
-administrator does not already exist.
+administrator does not already exist. When `DEMO_MODE=true`, it also seeds a
+least-privilege `PARTICIPANT` identity if both `DEMO_PARTICIPANT_EMAIL` and
+`DEMO_PARTICIPANT_PASSWORD` are configured. The participant email must differ
+from `ADMIN_EMAIL`.
 
 Changing `ADMIN_PASSWORD` later does not automatically overwrite an existing
 database user's password. A proper password-reset/user-management workflow
@@ -122,7 +127,9 @@ Run:
   -ApiUrl "https://<YOUR-API>.onrender.com" `
   -FrontendUrl "https://<YOUR-FRONTEND>.onrender.com" `
   -AdminEmail "your-demo-admin@example.com" `
-  -AdminPassword "YOUR-DEMO-PASSWORD"
+  -AdminPassword "YOUR-DEMO-PASSWORD" `
+  -ParticipantEmail "participant.demo@example.com" `
+  -ParticipantPassword "YOUR-PARTICIPANT-DEMO-PASSWORD"
 ```
 
 The script checks:

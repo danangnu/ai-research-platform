@@ -113,3 +113,40 @@ def test_project_management_and_audit(client, auth_headers):
 def test_unauthenticated_admin_is_rejected(client):
     response = client.get("/api/admin/audit")
     assert response.status_code == 401
+
+
+def test_demo_participant_is_least_privilege(client, participant_headers):
+    me = client.get(
+        "/api/auth/me",
+        headers=participant_headers,
+    )
+    assert me.status_code == 200
+    assert me.json()["roles"] == ["PARTICIPANT"]
+
+    projects = client.get(
+        "/api/projects",
+        headers=participant_headers,
+    )
+    assert projects.status_code == 403
+
+    create_project = client.post(
+        "/api/projects",
+        headers=participant_headers,
+        json={
+            "code": "FORBIDDEN-PARTICIPANT",
+            "name": "Participant must not create this",
+        },
+    )
+    assert create_project.status_code == 403
+
+    sites = client.get(
+        "/api/admin/study-sites",
+        headers=participant_headers,
+    )
+    assert sites.status_code == 403
+
+    audit = client.get(
+        "/api/admin/audit",
+        headers=participant_headers,
+    )
+    assert audit.status_code == 403

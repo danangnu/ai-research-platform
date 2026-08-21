@@ -5,6 +5,10 @@ os.environ["JWT_SECRET"] = "test-secret-value-only-32-bytes-minimum-2026"
 os.environ["ADMIN_EMAIL"] = "admin@test.example.com"
 os.environ["ADMIN_PASSWORD"] = "StrongTest123!"
 os.environ["ADMIN_FULL_NAME"] = "Test Administrator"
+os.environ["DEMO_MODE"] = "true"
+os.environ["DEMO_PARTICIPANT_EMAIL"] = "participant@test.example.com"
+os.environ["DEMO_PARTICIPANT_PASSWORD"] = "ParticipantTest123!"
+os.environ["DEMO_PARTICIPANT_FULL_NAME"] = "Test Participant"
 
 import pytest
 from fastapi.testclient import TestClient
@@ -49,3 +53,21 @@ def admin_token(client):
 @pytest.fixture()
 def auth_headers(admin_token):
     return {"Authorization": f"Bearer {admin_token}"}
+
+
+@pytest.fixture()
+def participant_token(client):
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "participant@test.example.com",
+            "password": "ParticipantTest123!",
+        },
+    )
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
+
+@pytest.fixture()
+def participant_headers(participant_token):
+    return {"Authorization": f"Bearer {participant_token}"}

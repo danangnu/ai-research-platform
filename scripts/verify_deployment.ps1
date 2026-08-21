@@ -9,7 +9,13 @@ param(
     [string]$AdminEmail,
 
     [Parameter(Mandatory = $true)]
-    [string]$AdminPassword
+    [string]$AdminPassword,
+
+    [Parameter(Mandatory = $false)]
+    [string]$ParticipantEmail = "",
+
+    [Parameter(Mandatory = $false)]
+    [string]$ParticipantPassword = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -71,6 +77,65 @@ if ($me.roles -notcontains "PROJECT_ADMIN") {
 }
 
 Write-Host "PASS: online RBAC"
+
+if ([bool]$ParticipantEmail -xor [bool]$ParticipantPassword) {
+    throw "ParticipantEmail and ParticipantPassword must be supplied together."
+}
+
+if ($ParticipantEmail -and $ParticipantPassword) {
+    $participantLogin = Invoke-RestMethod `
+        -Uri "$ApiUrl/api/auth/login" `
+        -Method Post `
+        -ContentType "application/json" `
+        -Body (@{
+            email = $ParticipantEmail
+            password = $ParticipantPassword
+        } | ConvertTo-Json) `
+        -TimeoutSec 90
+
+    $participantHeaders = @{
+        Authorization = "Bearer $($participantLogin.access_token)"
+    }
+
+    $participantMe = Invoke-RestMethod `
+        -Uri "$ApiUrl/api/auth/me" `
+        -Headers $participantHeaders `
+        -TimeoutSec 30
+
+    if ($participantMe.roles.Count -ne 1 -or $participantMe.roles[0] -ne "PARTICIPANT") {
+        throw "Demo participant does not have the expected least-privilege role."
+    }
+
+    try {
+        Invoke-RestMethod `
+            -Uri "$ApiUrl/api/projects" `
+            -Headers $participantHeaders `
+            -TimeoutSec 30 `
+            -ErrorAction Stop | Out-Null
+        throw "Participant project access unexpectedly succeeded."
+    }
+    catch {
+        if ($_.Exception.Response.StatusCode.value__ -ne 403) {
+            throw
+        }
+    }
+
+    try {
+        Invoke-RestMethod `
+            -Uri "$ApiUrl/api/admin/audit" `
+            -Headers $participantHeaders `
+            -TimeoutSec 30 `
+            -ErrorAction Stop | Out-Null
+        throw "Participant admin access unexpectedly succeeded."
+    }
+    catch {
+        if ($_.Exception.Response.StatusCode.value__ -ne 403) {
+            throw
+        }
+    }
+
+    Write-Host "PASS: demo participant least-privilege RBAC"
+}
 
 $frontend = Invoke-WebRequest `
     -Uri $FrontendUrl `

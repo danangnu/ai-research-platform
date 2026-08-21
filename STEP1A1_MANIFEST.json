@@ -1,7 +1,7 @@
 {
   "step": "1A.1",
-  "purpose": "Free demo deployment preparation for Render + Neon",
-  "backend_tests": "9 passed",
+  "purpose": "Free demo deployment preparation plus UI post-create refresh and demo participant RBAC acceptance fixture",
+  "backend_tests": "10 passed",
   "render_blueprint_parse": "passed",
   "services": [
     "ai-research-api",
@@ -20,6 +20,10 @@
     "frontend/src/App.tsx",
     "frontend/src/styles.css",
     "scripts/verify_deployment.ps1",
-    "README.md"
-  ]
+    "README.md",
+    "backend/app/services/seed.py",
+    "backend/tests/conftest.py",
+    "backend/tests/test_step1a.py"
+  ],
+  "version": "0.1.2-step1a1"
 }

@@ -1,4 +1,4 @@
-# AI Research Study Management Platform — Step 1A.1
+# AI Research Study Management Platform — Step 1A.1 (0.1.2)
 
 Step 1A establishes the core platform used to manage the HumorBot/STARCASM research project.
 
@@ -29,7 +29,9 @@ The seed process creates these roles:
 - `SITE_COORDINATOR`
 - `PARTICIPANT`
 
-The initial administrator is created from `.env`.
+The initial administrator is created from `.env`. In demo mode, an optional
+`PARTICIPANT` acceptance-test identity is also seeded when
+`DEMO_PARTICIPANT_EMAIL` and `DEMO_PARTICIPANT_PASSWORD` are configured.
 
 ## Repository structure
 
@@ -124,6 +126,17 @@ The smoke test checks:
 - risk creation
 - study-site creation
 - audit log visibility
+
+## Step 1A.1 patch 0.1.2
+
+- Project-page create actions now refresh the UI immediately after successful
+  project, milestone, task and risk writes; a browser refresh is no longer needed.
+- The form element is captured before awaiting the API call, preventing the
+  asynchronous `event.currentTarget.reset()` null-reference failure.
+- Newly created projects are explicitly reloaded by ID so their child lists are
+  synchronized immediately.
+- Demo deployments can seed a least-privilege `PARTICIPANT` identity for RBAC
+  acceptance testing without adding a general user-management API.
 
 ## Step 1A boundary
 

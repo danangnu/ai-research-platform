@@ -290,13 +290,14 @@ function ProjectPage({
   milestones: Milestone[];
   tasks: StudyTask[];
   risks: Risk[];
-  reload: () => Promise<void>;
+  reload: (projectId?: string) => Promise<void>;
 }) {
   const [message, setMessage] = useState("");
 
   async function addProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
 
     try {
       const project = await api.createProject({
@@ -306,9 +307,9 @@ function ProjectPage({
         status: "planning",
       });
       setSelectedProject(project);
-      event.currentTarget.reset();
+      form.reset();
       setMessage("Project created.");
-      await reload();
+      await reload(project.id);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Unable to create project.");
     }
@@ -316,9 +317,10 @@ function ProjectPage({
 
   async function addMilestone(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     if (!selectedProject) return;
 
-    const data = new FormData(event.currentTarget);
+    const data = new FormData(form);
 
     try {
       await api.createMilestone(selectedProject.id, {
@@ -326,9 +328,9 @@ function ProjectPage({
         name: data.get("name"),
         status: "not_started",
       });
-      event.currentTarget.reset();
+      form.reset();
       setMessage("Milestone created.");
-      await reload();
+      await reload(selectedProject.id);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Unable to create milestone.");
     }
@@ -336,9 +338,10 @@ function ProjectPage({
 
   async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     if (!selectedProject) return;
 
-    const data = new FormData(event.currentTarget);
+    const data = new FormData(form);
 
     try {
       await api.createTask(selectedProject.id, {
@@ -347,9 +350,9 @@ function ProjectPage({
         priority: data.get("priority") || "medium",
         status: "not_started",
       });
-      event.currentTarget.reset();
+      form.reset();
       setMessage("Task created.");
-      await reload();
+      await reload(selectedProject.id);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Unable to create task.");
     }
@@ -357,9 +360,10 @@ function ProjectPage({
 
   async function addRisk(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     if (!selectedProject) return;
 
-    const data = new FormData(event.currentTarget);
+    const data = new FormData(form);
 
     try {
       await api.createRisk(selectedProject.id, {
@@ -368,9 +372,9 @@ function ProjectPage({
         mitigation: data.get("mitigation") || "",
         status: "open",
       });
-      event.currentTarget.reset();
+      form.reset();
       setMessage("Risk created.");
-      await reload();
+      await reload(selectedProject.id);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Unable to create risk.");
     }
@@ -385,7 +389,7 @@ function ProjectPage({
         note: "Marked complete from Step 1A project dashboard.",
       });
       setMessage(`Task "${task.title}" completed.`);
-      await reload();
+      await reload(selectedProject.id);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Unable to update task.");
     }
@@ -570,7 +574,8 @@ function AdminPage({
 
   async function addSite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
 
     try {
       await api.createSite({
@@ -578,7 +583,7 @@ function AdminPage({
         name: data.get("name"),
         status: "active",
       });
-      event.currentTarget.reset();
+      form.reset();
       setMessage("Study site created.");
       await reload();
     } catch (err) {
@@ -671,21 +676,23 @@ export default function App() {
   const [sites, setSites] = useState<StudySite[]>([]);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
 
-  async function loadAll() {
+  async function loadAll(projectId?: string) {
     if (!user) return;
 
     const projectRows = await api.projects();
     setProjects(projectRows);
 
-    let current = selectedProject;
+    let current = projectId
+      ? projectRows.find((project) => project.id === projectId) || null
+      : selectedProject;
 
     if (!current && projectRows.length) {
       current = projectRows[0];
-      setSelectedProject(current);
     } else if (current) {
-      current = projectRows.find((p) => p.id === current!.id) || current;
-      setSelectedProject(current);
+      current = projectRows.find((project) => project.id === current!.id) || null;
     }
+
+    setSelectedProject(current);
 
     if (current) {
       const [milestoneRows, taskRows, riskRows] = await Promise.all([
