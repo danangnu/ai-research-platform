@@ -16,7 +16,7 @@
     "loading, error, no-participant and no-filter-match states",
     "responsive desktop and mobile participant workspace",
     "Step 1C.3 backend data-contract and RBAC acceptance coverage",
-    "Step 1C.3 deployment verification script"
+    "Step 1C.3 deployment verification script with Windows PowerShell-compatible property inspection"
   ],
   "privacy_boundary": {
     "participant_workspace_is_pseudonymous": true,

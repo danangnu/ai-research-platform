@@ -109,12 +109,12 @@ try {
         "lifecycle_status", "allocation_status", "study_group", "enrolled_at"
     )
     foreach ($field in $required) {
-        if ($field -notin $managed.PSObject.Properties.Name) { Fail "Missing participant field: $field" }
+        if ($null -eq $managed.PSObject.Properties[$field]) { Fail "Missing participant field: $field" }
     }
     Pass "Participant management list contract"
 
-    if ("preferred_name" -in $managed.PSObject.Properties.Name) { Fail "Applicant name leaked into participant record" }
-    if ("contact_email" -in $managed.PSObject.Properties.Name) { Fail "Applicant email leaked into participant record" }
+    if ($null -ne $managed.PSObject.Properties["preferred_name"]) { Fail "Applicant name leaked into participant record" }
+    if ($null -ne $managed.PSObject.Properties["contact_email"]) { Fail "Applicant email leaked into participant record" }
     Pass "Pseudonymous participant privacy boundary"
 
     $detail = Invoke-RestMethod `
