@@ -917,3 +917,18 @@ nav small {
     justify-content: flex-start;
   }
 }
+
+/* Step 1C.2 allocation controls */
+.compact-action {
+  width: auto;
+  white-space: nowrap;
+  padding: 7px 10px;
+  font-size: 0.74rem;
+}
+
+.participant-row small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.72rem;
+}

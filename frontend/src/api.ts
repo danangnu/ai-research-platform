@@ -347,9 +347,45 @@ export type ParticipantMetrics = {
   allocated: number;
   not_allocated: number;
   remaining_target: number;
+  humorbot: number;
+  starcasm: number;
+  control: number;
+};
+
+export type ParticipantAllocation = {
+  id: string;
+  participant_id: string;
+  study_group: "HumorBot" | "STARCASM" | "Control";
+  method: string;
+  algorithm_version: string;
+  allocation_basis: Record<string, unknown>;
+  allocated_by_id: string | null;
+  allocated_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AllocationSummary = {
+  target_total: number;
+  target_per_group: number;
+  allocated: number;
+  not_allocated: number;
+  remaining_capacity: number;
+  groups: Record<string, number>;
+  algorithm_version: string;
+  method: string;
+  protocol_finalized: boolean;
 };
 
 export const participantApi = {
   participants: () => request<Participant[]>("/api/participants"),
   metrics: () => request<ParticipantMetrics>("/api/participants/metrics"),
+  allocationSummary: () =>
+    request<AllocationSummary>("/api/participants/allocation-summary"),
+  allocate: (participantId: string) =>
+    request<ParticipantAllocation>(`/api/participants/${participantId}/allocate`, {
+      method: "POST",
+    }),
+  allocation: (participantId: string) =>
+    request<ParticipantAllocation>(`/api/participants/${participantId}/allocation`),
 };

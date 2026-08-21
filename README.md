@@ -1,4 +1,4 @@
-# AI Research Study Management Platform — Step 1C.1 (0.3.0)
+# AI Research Study Management Platform — Step 1C.2 (0.3.1)
 
 Step 1A establishes the core platform used to manage the HumorBot/STARCASM research project.
 
@@ -196,3 +196,20 @@ The detailed API still returns `under_review` separately.
 - HumorBot/STARCASM/Control allocation is deliberately deferred to Step 1C.2.
 
 Deployment verification is documented in `STEP1C1_ACCEPTANCE.md` and automated by `scripts/verify_step1c1.ps1`.
+
+
+## Step 1C.2 v0.3.1 — Experimental Allocation Foundation
+
+- Adds one immutable allocation record per enrolled participant.
+- Allocation can be triggered only by `PROJECT_ADMIN` or `RESEARCH_LEAD`.
+- `RESEARCH_ASSISTANT` can continue participant-management reads but cannot trigger allocation.
+- Uses a server-side **balanced random foundation**: assign only among groups with the current minimum count, then randomly break ties.
+- Enforces a hard capacity of 200 HumorBot, 200 STARCASM and 200 Control allocations.
+- Stores the counts-before snapshot, minimum-count tie candidates, random draw, tie index, algorithm version and selected group for audit reconstruction.
+- Allocation retries are idempotent and never change the participant's assigned group.
+- A PostgreSQL row lock serializes allocation decisions so concurrent requests cannot bypass capacity/balance checks.
+- Updates participant metrics, Overview recruitment matrix and Participants UI immediately after allocation.
+- Adds `participant.allocated` audit events.
+- The allocation engine is explicitly marked `protocol_finalized = false`: final stratification/randomization criteria remain subject to the approved research protocol.
+
+Deployment verification is documented in `STEP1C2_ACCEPTANCE.md` and automated by `scripts/verify_step1c2.ps1`.

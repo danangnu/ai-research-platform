@@ -51,3 +51,11 @@ RECRUITMENT_ROLES = {
 # Step 1C.1 participant identity/selection data remains recruitment-operations
 # data and is not exposed to AI/ML engineering or participant roles.
 PARTICIPANT_MANAGEMENT_ROLES = RECRUITMENT_ROLES
+
+
+# Step 1C.2 allocation is a protocol-sensitive operation. Research assistants
+# can continue participant-management work but cannot trigger assignment.
+ALLOCATION_ROLES = {
+    PROJECT_ADMIN,
+    RESEARCH_LEAD,
+}

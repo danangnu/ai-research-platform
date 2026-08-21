@@ -256,9 +256,37 @@ class ParticipantOut(ORMModel):
     updated_at: datetime
 
 
+class ParticipantAllocationOut(ORMModel):
+    id: str
+    participant_id: str
+    study_group: str
+    method: str
+    algorithm_version: str
+    allocation_basis: dict[str, Any]
+    allocated_by_id: str | None
+    allocated_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class AllocationSummaryOut(BaseModel):
+    target_total: int
+    target_per_group: int
+    allocated: int
+    not_allocated: int
+    remaining_capacity: int
+    groups: dict[str, int]
+    algorithm_version: str
+    method: str
+    protocol_finalized: bool
+
+
 class ParticipantMetricsOut(BaseModel):
     participants: int
     enrolled: int
     allocated: int
     not_allocated: int
     remaining_target: int
+    humorbot: int = 0
+    starcasm: int = 0
+    control: int = 0

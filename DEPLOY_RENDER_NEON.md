@@ -199,3 +199,22 @@ Before collecting real participant information, revisit:
 - security review and monitoring
 - retention/deletion policy
 - incident response
+
+## Step 1C.2 deployment verification
+
+After deploying version `0.3.1-step1c2`, run:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
+.\scripts\verify_step1c2.ps1 `
+  -ApiUrl "https://ai-research-api-00zg.onrender.com" `
+  -AdminEmail "<your admin email>" `
+  -AdminPassword '<your admin password>' `
+  -ParticipantEmail "participant.demo@example.com" `
+  -ParticipantPassword '<demo participant password>'
+```
+
+Step 1C.2 is still demo/protocol-foundation functionality. Do not use the
+balanced-random foundation for live study allocation until the final
+stratification/randomization method is approved by the research protocol.

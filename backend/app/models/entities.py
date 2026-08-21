@@ -216,6 +216,45 @@ class Participant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class AllocationState(Base):
+    __tablename__ = "allocation_states"
+
+    key: Mapped[str] = mapped_column(String(32), primary_key=True)
+    algorithm_version: Mapped[str] = mapped_column(
+        String(64), default="balanced_random_v1", nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False, onupdate=utcnow
+    )
+
+
+class ParticipantAllocation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "participant_allocations"
+
+    participant_id: Mapped[str] = mapped_column(
+        ForeignKey("participants.id", ondelete="RESTRICT"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    study_group: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    method: Mapped[str] = mapped_column(
+        String(64), default="balanced_random", nullable=False
+    )
+    algorithm_version: Mapped[str] = mapped_column(
+        String(64), default="balanced_random_v1", nullable=False
+    )
+    allocation_basis: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    allocated_by_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    allocated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False, index=True
+    )
+
+
 class AuditEvent(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "audit_events"
 

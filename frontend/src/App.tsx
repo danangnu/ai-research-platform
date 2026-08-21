@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   api,
+  AllocationSummary,
   AuditEvent,
   login,
   Milestone,
@@ -71,6 +72,11 @@ const RECRUITMENT_ROLES = new Set([
   "RESEARCH_ASSISTANT",
 ]);
 
+const ALLOCATION_ROLES = new Set([
+  "PROJECT_ADMIN",
+  "RESEARCH_LEAD",
+]);
+
 function hasAnyRole(user: User, allowed: Set<string>) {
   return user.roles.some((role) => allowed.has(role));
 }
@@ -93,6 +99,10 @@ function canAdminister(user: User) {
 
 function canRecruit(user: User) {
   return hasAnyRole(user, RECRUITMENT_ROLES);
+}
+
+function canAllocate(user: User) {
+  return hasAnyRole(user, ALLOCATION_ROLES);
 }
 
 function visibleNavigation(user: User) {
@@ -157,7 +167,7 @@ function LoginScreen({
         <p className="eyebrow">Research Operations</p>
         <h1>AI Research Study Management Platform</h1>
         <p className="muted">
-          Step 1B · Recruitment intake and eligibility review
+          Step 1C.2 · Experimental allocation foundation
         </p>
 
         <form onSubmit={submit} className="stack">
@@ -210,8 +220,8 @@ function ComingSoon({ title }: { title: string }) {
       <h2>{title}</h2>
       <p className="muted">
         The navigation position is reserved now so later study modules fit
-        into the same architecture. Step 1A deliberately does not implement
-        participant allocation, pre/post tests or model-study interactions.
+        into the same architecture. Step 1C.2 implements the allocation
+        foundation; pre/post tests and model-study interactions remain later phases.
       </p>
     </section>
   );
@@ -222,11 +232,13 @@ function Overview({
   tasks,
   risks,
   recruitmentMetrics,
+  allocationSummary,
 }: {
   projects: Project[];
   tasks: StudyTask[];
   risks: Risk[];
   recruitmentMetrics: RecruitmentMetrics | null;
+  allocationSummary: AllocationSummary | null;
 }) {
   const openTasks = tasks.filter((task) => task.status !== "completed").length;
   const openRisks = risks.filter((risk) => risk.status === "open").length;
@@ -242,7 +254,7 @@ function Overview({
             STARCASM and control-group study.
           </p>
         </div>
-        <span className="status-pill">Step 1C.1</span>
+        <span className="status-pill">Step 1C.2</span>
       </div>
 
       <div className="metric-grid">
@@ -256,18 +268,18 @@ function Overview({
         <section className="panel">
           <p className="eyebrow">Recruitment matrix</p>
           <h2>Study target</h2>
-          <GroupBar label="HumorBot" current={0} target={200} />
-          <GroupBar label="STARCASM" current={0} target={200} />
-          <GroupBar label="Control" current={0} target={200} />
+          <GroupBar label="HumorBot" current={allocationSummary?.groups?.HumorBot ?? 0} target={200} />
+          <GroupBar label="STARCASM" current={allocationSummary?.groups?.STARCASM ?? 0} target={200} />
+          <GroupBar label="Control" current={allocationSummary?.groups?.Control ?? 0} target={200} />
           <p className="tiny">
-            Group counts remain zero until the later selection/allocation workflow
-            is approved and implemented.
+            Step 1C.2 uses a server-side balanced random foundation with a 200-per-group cap.
+            Final stratification/randomization remains subject to the approved research protocol.
           </p>
         </section>
 
         <section className="panel">
           <p className="eyebrow">Current stage</p>
-          <h2>Selection & enrollment foundation</h2>
+          <h2>Experimental allocation foundation</h2>
           <ul className="checklist">
             <li>Step 1A foundation accepted</li>
             <li>Public synthetic application intake</li>
@@ -276,6 +288,8 @@ function Overview({
             <li>Eligibility-review workflow</li>
             <li>Selection decision tracking</li>
             <li>Pseudonymous participant enrollment</li>
+            <li>Server-side balanced random allocation</li>
+            <li>Immutable allocation audit record</li>
           </ul>
         </section>
       </div>
@@ -590,10 +604,10 @@ function Recruitment({
           <p className="eyebrow">Recruitment operations</p>
           <h1>Applications, Selection & Enrollment</h1>
           <p className="muted">
-            Step 1C.1 keeps eligibility, selection and enrollment as separate audited decisions. Group allocation is not performed yet.
+            Step 1C.2 keeps eligibility, selection and enrollment separate while adding controlled server-side allocation for enrolled participants.
           </p>
         </div>
-        <span className="status-pill">Step 1C.1</span>
+        <span className="status-pill">Step 1C.2</span>
       </div>
 
       {message && <div className="alert">{message}</div>}
@@ -671,7 +685,7 @@ function Recruitment({
                     <div className="enrollment-success">
                       <strong>Participant enrolled</strong>
                       <span>{enrolledParticipant.participant_code}</span>
-                      <small>Allocation: Not allocated</small>
+                      <small>Allocation: {enrolledParticipant.study_group || "Not allocated"}</small>
                     </div>
                   ) : (
                     <>
@@ -696,7 +710,7 @@ function Recruitment({
                       {selection?.status === "selected" && (
                         <div className="enrollment-action">
                           <strong>Selected for enrollment</strong>
-                          <p className="tiny">Enrollment creates a pseudonymous participant identity. Study-group allocation remains disabled until Step 1C.2.</p>
+                          <p className="tiny">Enrollment creates a pseudonymous participant identity. Study-group allocation is performed separately from the Participants page.</p>
                           <button type="button" className="primary" onClick={enroll}>Enroll participant</button>
                         </div>
                       )}
@@ -716,35 +730,88 @@ function Recruitment({
 function ParticipantsPage({
   participants,
   metrics,
+  allocationSummary,
   info,
+  allowAllocate,
+  reload,
 }: {
   participants: Participant[];
   metrics: ParticipantMetrics | null;
+  allocationSummary: AllocationSummary | null;
   info: RecruitmentPublicInfo | null;
+  allowAllocate: boolean;
+  reload: (projectId?: string) => Promise<void>;
 }) {
+  const [message, setMessage] = useState("");
+  const [busyId, setBusyId] = useState("");
+
   const siteName = (siteId: string | null) => {
     if (!siteId) return "No site";
     return info?.sites.find((site) => site.id === siteId)?.name || "Unknown site";
   };
+
+  async function allocate(participant: Participant) {
+    if (!allowAllocate || participant.allocation_status === "allocated") return;
+    setBusyId(participant.id);
+    setMessage("");
+    try {
+      const allocation = await participantApi.allocate(participant.id);
+      setMessage(`${participant.participant_code} allocated to ${allocation.study_group}.`);
+      await reload();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Unable to allocate participant.");
+    } finally {
+      setBusyId("");
+    }
+  }
 
   return (
     <>
       <div className="page-heading">
         <div>
           <p className="eyebrow">Participant management</p>
-          <h1>Participants</h1>
+          <h1>Participants & Allocation</h1>
           <p className="muted">
-            Step 1C.1 stores pseudonymous participant identities only. Experimental allocation begins in Step 1C.2.
+            Step 1C.2 records one immutable server-side assignment per enrolled participant.
+            The current balanced-random foundation is provisional until the final protocol defines stratification.
           </p>
         </div>
-        <span className="status-pill">Step 1C.1</span>
+        <span className="status-pill">Step 1C.2</span>
       </div>
+
+      {message && <div className="alert">{message}</div>}
 
       <div className="metric-grid">
         <Metric label="Total participants" value={metrics?.participants ?? 0} />
         <Metric label="Enrolled" value={metrics?.enrolled ?? 0} />
         <Metric label="Allocated" value={metrics?.allocated ?? 0} />
         <Metric label="Remaining target" value={metrics?.remaining_target ?? 600} />
+      </div>
+
+      <div className="two-col">
+        <section className="panel">
+          <p className="eyebrow">Allocation matrix</p>
+          <h2>Study groups</h2>
+          <GroupBar label="HumorBot" current={metrics?.humorbot ?? 0} target={200} />
+          <GroupBar label="STARCASM" current={metrics?.starcasm ?? 0} target={200} />
+          <GroupBar label="Control" current={metrics?.control ?? 0} target={200} />
+        </section>
+        <section className="panel">
+          <p className="eyebrow">Allocation control</p>
+          <h2>Server-side assignment</h2>
+          <p className="muted">
+            Method: {allocationSummary?.method?.replaceAll("_", " ") || "balanced random"}
+            {" · "}Version: {allocationSummary?.algorithm_version || "balanced_random_v1"}
+          </p>
+          <p className="tiny">
+            The engine assigns only among groups with the current minimum count and randomly breaks ties.
+            Administrators cannot choose a study group manually. Final protocol stratification is not configured yet.
+          </p>
+          <div className="protocol-warning">
+            <strong>Protocol gate</strong>
+            <p>This is an allocation foundation, not the final approved statistical randomization procedure.</p>
+          </div>
+        </section>
       </div>
 
       <section className="panel">
@@ -761,10 +828,22 @@ function ParticipantsPage({
               <div>
                 <strong>{participant.participant_code}</strong>
                 <span>{siteName(participant.site_id)}</span>
+                {participant.study_group && <small>Study group: {participant.study_group}</small>}
               </div>
               <div className="participant-statuses">
                 <span className="tag recruitment-eligible">{participant.lifecycle_status}</span>
                 <span className="tag">{participant.allocation_status.replaceAll("_", " ")}</span>
+                {participant.study_group && <span className="tag">{participant.study_group}</span>}
+                {participant.allocation_status === "not_allocated" && allowAllocate && (
+                  <button
+                    type="button"
+                    className="secondary compact-action"
+                    disabled={busyId === participant.id}
+                    onClick={() => allocate(participant)}
+                  >
+                    {busyId === participant.id ? "Allocating…" : "Run server-side allocation"}
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -776,6 +855,7 @@ function ParticipantsPage({
     </>
   );
 }
+
 function ProjectPage({
   projects,
   selectedProject,
@@ -1205,6 +1285,7 @@ export default function App() {
   const [selectionDecisions, setSelectionDecisions] = useState<SelectionDecision[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [participantMetrics, setParticipantMetrics] = useState<ParticipantMetrics | null>(null);
+  const [allocationSummary, setAllocationSummary] = useState<AllocationSummary | null>(null);
 
   function clearProjectState() {
     setProjects([]);
@@ -1232,14 +1313,19 @@ export default function App() {
     clearProjectState();
     clearAdminState();
     clearRecruitmentState();
+    setAllocationSummary(null);
   }
 
   async function loadAll(projectId?: string) {
     if (!user) return;
 
     if (canReadProjects(user)) {
-      const projectRows = await api.projects();
+      const [projectRows, allocationSummaryRow] = await Promise.all([
+        api.projects(),
+        participantApi.allocationSummary(),
+      ]);
       setProjects(projectRows);
+      setAllocationSummary(allocationSummaryRow);
 
       let current = projectId
         ? projectRows.find((project) => project.id === projectId) || null
@@ -1270,6 +1356,7 @@ export default function App() {
       }
     } else {
       clearProjectState();
+      setAllocationSummary(null);
     }
 
     if (canRecruit(user)) {
@@ -1433,6 +1520,7 @@ export default function App() {
               tasks={tasks}
               risks={risks}
               recruitmentMetrics={recruitmentMetrics}
+              allocationSummary={allocationSummary}
             />
           ) : (
             <LimitedOverview user={user} />
@@ -1453,7 +1541,10 @@ export default function App() {
           <ParticipantsPage
             participants={participants}
             metrics={participantMetrics}
+            allocationSummary={allocationSummary}
             info={recruitmentInfo}
+            allowAllocate={canAllocate(user)}
+            reload={loadAll}
           />
         )}
 

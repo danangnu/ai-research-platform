@@ -12,6 +12,8 @@ from app.models.entities import (
     SelectionDecision,
     ParticipantCounter,
     Participant,
+    AllocationState,
+    ParticipantAllocation,
     user_roles,
 )
 
@@ -29,5 +31,7 @@ __all__ = [
     "SelectionDecision",
     "ParticipantCounter",
     "Participant",
+    "AllocationState",
+    "ParticipantAllocation",
     "user_roles",
 ]

@@ -1,0 +1,32 @@
+{
+  "step": "1C.2",
+  "version": "0.3.1-step1c2",
+  "title": "Experimental Allocation Foundation",
+  "includes": [
+    "immutable one-allocation-per-participant records",
+    "PROJECT_ADMIN / RESEARCH_LEAD allocation authority",
+    "server-side balanced random minimum-count allocation",
+    "cryptographic random tie-break with auditable draw and tie index",
+    "200 HumorBot / 200 STARCASM / 200 Control capacity enforcement",
+    "PostgreSQL serialized allocation lock",
+    "allocation idempotency and no reallocation",
+    "participant allocation summary and group metrics",
+    "Overview and Participants allocation UI",
+    "participant.allocated audit event",
+    "Alembic migration 20260821_0004",
+    "Step 1C.2 backend and deployment acceptance tests"
+  ],
+  "research_boundary": {
+    "protocol_finalized": false,
+    "foundation_method": "balanced_random_v1",
+    "final_stratification": "not configured",
+    "manual_group_selection": false
+  },
+  "deferred": [
+    "protocol-approved stratification variables",
+    "final randomization method",
+    "participant account linkage",
+    "pre-test instrumentation",
+    "study-condition routing"
+  ]
+}
