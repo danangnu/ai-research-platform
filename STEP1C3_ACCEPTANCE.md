@@ -65,8 +65,9 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 The script creates one synthetic participant, allocates it through the unchanged
 Step 1C.2 engine, verifies list/detail fields, confirms that applicant identity
 fields are absent and verifies participant-role denial. Its response-property
-checks use indexed `PSObject.Properties` lookup for compatibility with both
-Windows PowerShell 5.1 and PowerShell 7.
+checks avoid array-subexpression wrapping and use `Get-Member` so top-level JSON
+arrays and response properties behave consistently in Windows PowerShell 5.1
+and PowerShell 7.
 
 ## Manual UI acceptance
 

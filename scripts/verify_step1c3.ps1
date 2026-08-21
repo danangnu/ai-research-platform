@@ -99,22 +99,34 @@ try {
     if ($allocation.participant_id -ne $participant.id) { Fail "Allocation does not match participant" }
     Pass "Accepted Step 1C.2 allocation remains operational"
 
-    $participants = @(Invoke-RestMethod -Uri "$ApiUrl/api/participants" -Headers $headers)
-    $managed = @($participants | Where-Object { $_.id -eq $participant.id })
-    if ($managed.Count -ne 1) { Fail "Participant was not found exactly once in management list" }
-    $managed = $managed[0]
+    # Do not wrap Invoke-RestMethod in @(...). Windows PowerShell and PowerShell 7
+    # differ in how a top-level JSON array is emitted to the pipeline; wrapping it
+    # can leave a nested Object[] whose PSObject has no participant fields.
+    $participants = Invoke-RestMethod `
+        -Uri "$ApiUrl/api/participants" `
+        -Headers $headers
+    $managed = $null
+    $matchCount = 0
+    foreach ($candidate in $participants) {
+        if ($candidate.id -eq $participant.id) {
+            $managed = $candidate
+            $matchCount++
+        }
+    }
+    if ($matchCount -ne 1) { Fail "Participant was not found exactly once in management list" }
 
     $required = @(
         "id", "participant_code", "application_id", "site_id", "user_id",
         "lifecycle_status", "allocation_status", "study_group", "enrolled_at"
     )
     foreach ($field in $required) {
-        if ($null -eq $managed.PSObject.Properties[$field]) { Fail "Missing participant field: $field" }
+        $property = $managed | Get-Member -Name $field -MemberType Properties
+        if ($null -eq $property) { Fail "Missing participant field: $field" }
     }
     Pass "Participant management list contract"
 
-    if ($null -ne $managed.PSObject.Properties["preferred_name"]) { Fail "Applicant name leaked into participant record" }
-    if ($null -ne $managed.PSObject.Properties["contact_email"]) { Fail "Applicant email leaked into participant record" }
+    if ($null -ne ($managed | Get-Member -Name "preferred_name" -MemberType Properties)) { Fail "Applicant name leaked into participant record" }
+    if ($null -ne ($managed | Get-Member -Name "contact_email" -MemberType Properties)) { Fail "Applicant email leaked into participant record" }
     Pass "Pseudonymous participant privacy boundary"
 
     $detail = Invoke-RestMethod `
