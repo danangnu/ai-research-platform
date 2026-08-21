@@ -290,3 +290,29 @@ class ParticipantMetricsOut(BaseModel):
     humorbot: int = 0
     starcasm: int = 0
     control: int = 0
+
+
+class ParticipantAccountLinkIn(BaseModel):
+    email: EmailStr
+    full_name: str = Field(min_length=2, max_length=255)
+    initial_password: str | None = Field(default=None, min_length=12, max_length=512)
+
+
+class ParticipantAccountLinkOut(BaseModel):
+    participant_id: str
+    participant_code: str
+    user_id: str
+    account_status: str
+    created_account: bool
+    linked_at: datetime
+
+
+class ParticipantSelfOut(BaseModel):
+    participant_id: str
+    participant_code: str
+    site_id: str | None
+    lifecycle_status: str
+    allocation_status: str
+    assigned_condition: str | None
+    enrolled_at: datetime
+    account_status: str

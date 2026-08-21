@@ -19,7 +19,7 @@ def normalize_database_url(value: str) -> str:
 
 class Settings(BaseSettings):
     app_name: str = "AI Research Study Management Platform"
-    app_version: str = "0.4.0-step1c3"
+    app_version: str = "0.5.0-step1c4"
     database_url: str = (
         "postgresql+psycopg://research:"
         "research-dev-password@localhost:5432/ai_research"

@@ -50,7 +50,7 @@ def test_step1c3_participant_management_contract_and_rbac(
 ):
     health = client.get("/health")
     assert health.status_code == 200
-    assert health.json()["version"] == "0.4.0-step1c3"
+    assert health.json()["version"] == "0.5.0-step1c4"
 
     participant = _enroll_participant(client, auth_headers)
     allocation = client.post(

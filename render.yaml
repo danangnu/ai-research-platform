@@ -42,7 +42,7 @@ services:
     runtime: static
     name: ai-research-study
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL

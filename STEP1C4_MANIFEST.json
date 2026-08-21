@@ -1,0 +1,39 @@
+{
+  "step": "1C.4",
+  "version": "0.5.0-step1c4",
+  "title": "Participant Account & RBAC Integration",
+  "includes": [
+    "authorized participant-only account creation or existing-account linkage",
+    "one-account-per-participant and one-participant-per-account enforcement",
+    "enrolled-participant linkage precondition",
+    "account-link immutability and idempotency",
+    "participant.account_linked audit event without email disclosure",
+    "participant-only GET /api/participant/me own-record endpoint",
+    "participant portal for participant code, lifecycle, allocation status and assigned condition",
+    "explicit unlinked-account portal state",
+    "administrator participant-detail account-link form",
+    "cross-participant and staff-API RBAC denial coverage",
+    "Windows PowerShell-compatible Step 1C.4 deployment verifier"
+  ],
+  "privacy_boundary": {
+    "participant_self_endpoint_is_own_record_only": true,
+    "application_identity_exposed_to_participant": false,
+    "allocation_trace_exposed_to_participant": false,
+    "account_email_written_to_link_audit": false
+  },
+  "unchanged": [
+    "balanced_random_v1 allocation behavior",
+    "200 HumorBot / 200 STARCASM / 200 Control capacity",
+    "allocation immutability and idempotency",
+    "allocation protocol_finalized remains false",
+    "participant-management search/filter/detail behavior"
+  ],
+  "database_migration": "none; uses existing unique participants.user_id foreign key",
+  "deferred": [
+    "production invitation and credential-delivery workflow",
+    "password reset and multi-factor authentication",
+    "participant study-session activities",
+    "final protocol-approved stratification",
+    "final consolidated Step 1C.5 acceptance suite"
+  ]
+}

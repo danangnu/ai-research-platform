@@ -59,3 +59,12 @@ ALLOCATION_ROLES = {
     PROJECT_ADMIN,
     RESEARCH_LEAD,
 }
+
+
+# Participant-account linkage joins authentication data to a pseudonymous
+# research identity. Keep this operation with the two study-authority roles;
+# recruitment assistants can inspect participants but cannot provision access.
+PARTICIPANT_ACCOUNT_ROLES = {
+    PROJECT_ADMIN,
+    RESEARCH_LEAD,
+}

@@ -1033,6 +1033,22 @@ nav small {
   border-top: 1px solid #e2e8f0;
 }
 
+/* Step 1C.4 participant account integration */
+.account-link-block {
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.account-link-block .compact-form {
+  margin-top: 12px;
+}
+
+.account-linked {
+  color: #166534;
+  background: #dcfce7;
+}
+
 @media (max-width: 1180px) {
   .participant-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

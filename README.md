@@ -1,4 +1,4 @@
-# AI Research Study Management Platform — Step 1C.3 (0.4.0)
+# AI Research Study Management Platform — Step 1C.4 (0.5.0)
 
 Step 1A establishes the core platform used to manage the HumorBot/STARCASM research project.
 
@@ -227,3 +227,20 @@ Deployment verification is documented in `STEP1C2_ACCEPTANCE.md` and automated b
 - Does not change the accepted Step 1C.2 allocation algorithm, capacity or protocol boundary.
 
 Deployment verification is documented in `STEP1C3_ACCEPTANCE.md` and automated by `scripts/verify_step1c3.ps1`.
+
+
+## Step 1C.4 v0.5.0 — Participant Account & RBAC Integration
+
+- Allows `PROJECT_ADMIN` and `RESEARCH_LEAD` to create or link an active participant-only login to an enrolled participant.
+- Enforces one immutable account link per participant and one participant per account through server checks and the existing unique database constraint.
+- Makes same-participant/same-account retries idempotent without rotating credentials or duplicating audit records.
+- Rejects inactive, privileged or mixed-role accounts and prevents participant sessions from administering account links.
+- Adds `GET /api/participant/me`, which resolves only the participant linked to the signed-in account.
+- Returns participant code, site, lifecycle, allocation status, assigned condition and enrollment time while excluding recruitment identity and allocation trace metadata.
+- Adds an own-record **My Study Portal** and an administrator account-link control in participant detail.
+- Adds `participant.account_linked` audit events containing pseudonymous/technical IDs but no account email.
+- Preserves all accepted Step 1C.1–1C.3 enrollment, allocation and participant-management behavior.
+
+Deployment verification is documented in `STEP1C4_ACCEPTANCE.md` and automated by `scripts/verify_step1c4.ps1`.
+
+Production invitation delivery, password reset, multi-factor authentication and participant study sessions remain deferred. Use synthetic credentials in the demo environment.

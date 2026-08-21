@@ -8,6 +8,7 @@ import {
   Participant,
   ParticipantAllocation,
   ParticipantMetrics,
+  ParticipantSelf,
   participantApi,
   Project,
   RecruitmentApplication,
@@ -168,7 +169,7 @@ function LoginScreen({
         <p className="eyebrow">Research Operations</p>
         <h1>AI Research Study Management Platform</h1>
         <p className="muted">
-          Step 1C.3 · Participant management UI
+          Step 1C.4 · Participant account & RBAC integration
         </p>
 
         <form onSubmit={submit} className="stack">
@@ -221,8 +222,8 @@ function ComingSoon({ title }: { title: string }) {
       <h2>{title}</h2>
       <p className="muted">
         The navigation position is reserved now so later study modules fit
-        into the same architecture. Step 1C.3 adds the searchable participant
-        workspace; pre/post tests and model-study interactions remain later phases.
+        into the same architecture. Step 1C.4 links participant-only accounts
+        to enrolled identities; pre/post tests and model-study interactions remain later phases.
       </p>
     </section>
   );
@@ -255,7 +256,7 @@ function Overview({
             STARCASM and control-group study.
           </p>
         </div>
-        <span className="status-pill">Step 1C.3</span>
+        <span className="status-pill">Step 1C.4</span>
       </div>
 
       <div className="metric-grid">
@@ -280,7 +281,7 @@ function Overview({
 
         <section className="panel">
           <p className="eyebrow">Current stage</p>
-          <h2>Participant management UI</h2>
+          <h2>Participant account & RBAC integration</h2>
           <ul className="checklist">
             <li>Step 1A foundation accepted</li>
             <li>Public synthetic application intake</li>
@@ -293,6 +294,8 @@ function Overview({
             <li>Immutable allocation audit record</li>
             <li>Searchable, filterable participant workspace</li>
             <li>Pseudonymous participant detail view</li>
+            <li>Participant-only account linkage</li>
+            <li>Own-record participant portal</li>
           </ul>
         </section>
       </div>
@@ -301,12 +304,50 @@ function Overview({
 }
 
 function LimitedOverview({ user }: { user: User }) {
+  const isParticipant = user.roles.includes("PARTICIPANT");
+  const [participant, setParticipant] = useState<ParticipantSelf | null>(null);
+  const [loading, setLoading] = useState(isParticipant);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!isParticipant) return;
+    let active = true;
+    setLoading(true);
+    setError("");
+    participantApi
+      .self()
+      .then((record) => {
+        if (active) setParticipant(record);
+      })
+      .catch((err) => {
+        if (active) {
+          setParticipant(null);
+          setError(err instanceof Error ? err.message : "Unable to load your study record.");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isParticipant]);
+
+  const formatDate = (value: string) =>
+    new Date(value).toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
   return (
     <>
       <div className="page-heading">
         <div>
           <p className="eyebrow">Participant access</p>
-          <h1>Study Portal</h1>
+          <h1>{isParticipant ? "My Study Portal" : "Limited Study Portal"}</h1>
           <p className="muted">
             Signed in as {user.full_name}. Project-management and
             administrative research data are not available to this role.
@@ -317,21 +358,37 @@ function LimitedOverview({ user }: { user: User }) {
 
       <div className="two-col">
         <section className="panel">
-          <p className="eyebrow">Access boundary</p>
-          <h2>Participant workspace</h2>
-          <p className="muted">
-            Step 1A verifies authentication and least-privilege access.
-            Participant study activities, pre/post testing and assigned
-            sessions will be added in later study phases.
-          </p>
+          <p className="eyebrow">My study identity</p>
+          <h2>{participant?.participant_code || "Participant workspace"}</h2>
+          {!isParticipant && (
+            <p className="muted">No participant record is available to this role.</p>
+          )}
+          {isParticipant && loading && <p className="muted">Loading your linked study record…</p>}
+          {isParticipant && error && (
+            <div className="alert error">
+              <strong>Account linkage required</strong>
+              <p>{error}</p>
+            </div>
+          )}
+          {participant && (
+            <dl className="detail-grid participant-detail-grid">
+              <div><dt>Participant code</dt><dd>{participant.participant_code}</dd></div>
+              <div><dt>Lifecycle status</dt><dd>{participant.lifecycle_status}</dd></div>
+              <div><dt>Allocation status</dt><dd>{participant.allocation_status.replaceAll("_", " ")}</dd></div>
+              <div><dt>Assigned condition</dt><dd>{participant.assigned_condition || "Pending allocation"}</dd></div>
+              <div><dt>Enrolled</dt><dd>{formatDate(participant.enrolled_at)}</dd></div>
+              <div><dt>Account status</dt><dd>{participant.account_status}</dd></div>
+            </dl>
+          )}
         </section>
 
         <section className="panel">
           <p className="eyebrow">Security</p>
           <h2>Management data protected</h2>
           <p className="muted">
-            Project, risk, milestone, study-site and audit data are restricted
-            by the backend RBAC policy and are not loaded into this view.
+            This view loads only the participant record linked to the signed-in
+            account. Recruitment applications, other participants, allocation
+            internals, project records and audit data remain server-restricted.
           </p>
         </section>
       </div>
@@ -607,10 +664,10 @@ function Recruitment({
           <p className="eyebrow">Recruitment operations</p>
           <h1>Applications, Selection & Enrollment</h1>
           <p className="muted">
-            Step 1C.3 preserves the accepted eligibility, selection, enrollment and allocation boundaries while adding participant-management search and inspection.
+            Step 1C.4 preserves the accepted eligibility, selection, enrollment and allocation boundaries while adding participant-account linkage and own-record access.
           </p>
         </div>
-        <span className="status-pill">Step 1C.3</span>
+        <span className="status-pill">Step 1C.4</span>
       </div>
 
       {message && <div className="alert">{message}</div>}
@@ -736,6 +793,7 @@ function ParticipantsPage({
   allocationSummary,
   info,
   allowAllocate,
+  allowAccountLink,
   loading,
   loadError,
   reload,
@@ -745,6 +803,7 @@ function ParticipantsPage({
   allocationSummary: AllocationSummary | null;
   info: RecruitmentPublicInfo | null;
   allowAllocate: boolean;
+  allowAccountLink: boolean;
   loading: boolean;
   loadError: string;
   reload: (projectId?: string) => Promise<void>;
@@ -764,6 +823,7 @@ function ParticipantsPage({
   const [selectedAllocation, setSelectedAllocation] = useState<ParticipantAllocation | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [accountBusy, setAccountBusy] = useState(false);
 
   const pageSize = 25;
 
@@ -917,6 +977,29 @@ function ParticipantsPage({
     }
   }
 
+  async function linkAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedParticipant || !allowAccountLink || selectedParticipant.user_id) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    setAccountBusy(true);
+    setMessage("");
+    try {
+      const link = await participantApi.linkAccount(selectedParticipant.id, {
+        email: data.get("email"),
+        full_name: data.get("full_name"),
+        initial_password: data.get("initial_password") || null,
+      });
+      form.reset();
+      setMessage(`${link.participant_code} linked to a participant-only account.`);
+      await reload();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Unable to link participant account.");
+    } finally {
+      setAccountBusy(false);
+    }
+  }
+
   return (
     <>
       <div className="page-heading">
@@ -929,7 +1012,7 @@ function ParticipantsPage({
             details remain separated from this workspace.
           </p>
         </div>
-        <span className="status-pill">Step 1C.3</span>
+        <span className="status-pill">Step 1C.4</span>
       </div>
 
       {message && <div className="alert">{message}</div>}
@@ -1079,6 +1162,7 @@ function ParticipantsPage({
                 <span className="tag recruitment-eligible">{participant.lifecycle_status}</span>
                 <span className="tag">{participant.allocation_status.replaceAll("_", " ")}</span>
                 {participant.study_group && <span className="tag">{participant.study_group}</span>}
+                {participant.user_id && <span className="tag account-linked">account linked</span>}
                 <button
                   type="button"
                   className="secondary compact-action"
@@ -1161,9 +1245,37 @@ function ParticipantsPage({
               <div><dt>Assigned condition</dt><dd>{selectedParticipant.study_group || "Not allocated"}</dd></div>
               <div>
                 <dt>Participant account</dt>
-                <dd>{selectedParticipant.user_id ? "Linked" : "Not linked · planned for Step 1C.4"}</dd>
+                <dd>{selectedParticipant.user_id ? "Linked to participant-only login" : "Not linked"}</dd>
               </div>
             </dl>
+
+            {!selectedParticipant.user_id && allowAccountLink && (
+              <div className="account-link-block">
+                <strong>Link participant account</strong>
+                <p className="tiny">
+                  Link an existing active PARTICIPANT-only login, or create one with an initial password.
+                  The account can be linked to only one enrolled participant.
+                </p>
+                <form className="compact-form" onSubmit={linkAccount}>
+                  <input name="email" type="email" placeholder="Participant login email" required />
+                  <input name="full_name" placeholder="Participant display name" required minLength={2} />
+                  <input
+                    name="initial_password"
+                    type="password"
+                    placeholder="Initial password (new account only)"
+                    minLength={12}
+                    autoComplete="new-password"
+                  />
+                  <button className="primary" disabled={accountBusy}>
+                    {accountBusy ? "Linking…" : "Create or link account"}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {!selectedParticipant.user_id && !allowAccountLink && (
+              <p className="tiny">Account linking is restricted to project administrators and research leads.</p>
+            )}
 
             <div className="allocation-detail-block">
               <strong>Allocation record</strong>
@@ -1893,6 +2005,7 @@ export default function App() {
             allocationSummary={allocationSummary}
             info={recruitmentInfo}
             allowAllocate={canAllocate(user)}
+            allowAccountLink={canAdminister(user)}
             loading={platformLoading}
             loadError={platformError}
             reload={loadAll}

@@ -377,6 +377,26 @@ export type AllocationSummary = {
   protocol_finalized: boolean;
 };
 
+export type ParticipantAccountLink = {
+  participant_id: string;
+  participant_code: string;
+  user_id: string;
+  account_status: "linked";
+  created_account: boolean;
+  linked_at: string;
+};
+
+export type ParticipantSelf = {
+  participant_id: string;
+  participant_code: string;
+  site_id: string | null;
+  lifecycle_status: string;
+  allocation_status: string;
+  assigned_condition: "HumorBot" | "STARCASM" | "Control" | null;
+  enrolled_at: string;
+  account_status: "linked";
+};
+
 export const participantApi = {
   participants: () => request<Participant[]>("/api/participants"),
   metrics: () => request<ParticipantMetrics>("/api/participants/metrics"),
@@ -388,4 +408,10 @@ export const participantApi = {
     }),
   allocation: (participantId: string) =>
     request<ParticipantAllocation>(`/api/participants/${participantId}/allocation`),
+  linkAccount: (participantId: string, body: Record<string, unknown>) =>
+    request<ParticipantAccountLink>(`/api/participants/${participantId}/account`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  self: () => request<ParticipantSelf>("/api/participant/me"),
 };

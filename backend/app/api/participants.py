@@ -5,28 +5,40 @@ import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import require_roles
-from app.core.roles import ALLOCATION_ROLES, PARTICIPANT_MANAGEMENT_ROLES, PROJECT_READ_ROLES
+from app.core.roles import (
+    ALLOCATION_ROLES,
+    PARTICIPANT,
+    PARTICIPANT_ACCOUNT_ROLES,
+    PARTICIPANT_MANAGEMENT_ROLES,
+    PROJECT_READ_ROLES,
+)
+from app.core.security import hash_password
 from app.db.base import utcnow
 from app.db.session import get_db
 from app.models import (
     AllocationState,
     Participant,
     ParticipantAllocation,
+    Role,
     User,
 )
 from app.schemas.common import (
     AllocationSummaryOut,
+    ParticipantAccountLinkIn,
+    ParticipantAccountLinkOut,
     ParticipantAllocationOut,
     ParticipantMetricsOut,
     ParticipantOut,
+    ParticipantSelfOut,
 )
 from app.services.audit import write_audit
 
 
 router = APIRouter(prefix="/api/participants", tags=["participants"])
+self_router = APIRouter(prefix="/api/participant", tags=["participant self-service"])
 TARGET_PARTICIPANTS = 600
 TARGET_PER_GROUP = 200
 STUDY_GROUPS = ("HumorBot", "STARCASM", "Control")
@@ -141,6 +153,177 @@ def allocation_summary(
     )
 
 
+def _account_link_out(
+    participant: Participant,
+    *,
+    created_account: bool,
+) -> ParticipantAccountLinkOut:
+    return ParticipantAccountLinkOut(
+        participant_id=participant.id,
+        participant_code=participant.participant_code,
+        user_id=str(participant.user_id),
+        account_status="linked",
+        created_account=created_account,
+        linked_at=participant.updated_at,
+    )
+
+
+@router.post(
+    "/{participant_id}/account",
+    response_model=ParticipantAccountLinkOut,
+)
+def link_participant_account(
+    participant_id: str,
+    payload: ParticipantAccountLinkIn,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(*PARTICIPANT_ACCOUNT_ROLES)),
+):
+    participant = db.scalar(
+        select(Participant)
+        .where(Participant.id == participant_id)
+        .with_for_update()
+    )
+    if participant is None:
+        raise HTTPException(status_code=404, detail="Participant not found.")
+    if participant.lifecycle_status != "enrolled":
+        raise HTTPException(
+            status_code=409,
+            detail="Only an enrolled participant can be linked to an account.",
+        )
+
+    normalized_email = str(payload.email).strip().lower()
+    normalized_name = payload.full_name.strip()
+    if len(normalized_name) < 2:
+        raise HTTPException(
+            status_code=422,
+            detail="Participant display name must contain at least two characters.",
+        )
+    if participant.user_id:
+        linked_user = db.get(User, participant.user_id)
+        if linked_user and linked_user.email == normalized_email:
+            # Safe retry: the existing immutable link is returned without a
+            # second audit event or password change.
+            return _account_link_out(participant, created_account=False)
+        raise HTTPException(
+            status_code=409,
+            detail="Participant is already linked to a different account.",
+        )
+
+    account = db.scalar(
+        select(User)
+        .options(selectinload(User.roles))
+        .where(User.email == normalized_email)
+    )
+    created_account = account is None
+
+    if account is None:
+        if not payload.initial_password:
+            raise HTTPException(
+                status_code=422,
+                detail="An initial password is required when creating an account.",
+            )
+        participant_role = db.scalar(select(Role).where(Role.name == PARTICIPANT))
+        if participant_role is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Participant role is not configured.",
+            )
+        account = User(
+            email=normalized_email,
+            full_name=normalized_name,
+            password_hash=hash_password(payload.initial_password),
+            is_active=True,
+        )
+        account.roles.append(participant_role)
+        db.add(account)
+        try:
+            db.flush()
+        except IntegrityError as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="An account with this email already exists.",
+            ) from exc
+    else:
+        account_roles = {role.name for role in account.roles}
+        if not account.is_active or account_roles != {PARTICIPANT}:
+            raise HTTPException(
+                status_code=409,
+                detail="Only an active participant-only account can be linked.",
+            )
+        existing_participant = db.scalar(
+            select(Participant).where(Participant.user_id == account.id)
+        )
+        if existing_participant is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Account is already linked to another participant.",
+            )
+
+    participant.user_id = account.id
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Participant or account already has an account link.",
+        ) from exc
+
+    write_audit(
+        db,
+        actor=user,
+        action="participant.account_linked",
+        entity_type="participant",
+        entity_id=participant.id,
+        details={
+            "participant_code": participant.participant_code,
+            "user_id": account.id,
+            "created_account": created_account,
+            "role": PARTICIPANT,
+        },
+        ip_address=request.client.host if request.client else None,
+    )
+    db.commit()
+    db.refresh(participant)
+    response.status_code = status.HTTP_201_CREATED
+    return _account_link_out(participant, created_account=created_account)
+
+
+@self_router.get("/me", response_model=ParticipantSelfOut)
+def participant_self(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(PARTICIPANT)),
+):
+    # Provisioning enforces an exact participant-only role set. Recheck here so
+    # a later role mutation cannot silently widen a self-service session.
+    if {role.name for role in user.roles} != {PARTICIPANT}:
+        raise HTTPException(
+            status_code=403,
+            detail="Participant self-service requires a participant-only account.",
+        )
+
+    participant = db.scalar(
+        select(Participant).where(Participant.user_id == user.id)
+    )
+    if participant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Participant account is not linked to an enrolled participant.",
+        )
+
+    return ParticipantSelfOut(
+        participant_id=participant.id,
+        participant_code=participant.participant_code,
+        site_id=participant.site_id,
+        lifecycle_status=participant.lifecycle_status,
+        allocation_status=participant.allocation_status,
+        assigned_condition=participant.study_group,
+        enrolled_at=participant.enrolled_at,
+        account_status="linked",
+    )
 @router.post("/{participant_id}/allocate", response_model=ParticipantAllocationOut)
 def allocate_participant(
     participant_id: str,
