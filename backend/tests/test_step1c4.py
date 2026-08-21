@@ -47,7 +47,7 @@ def test_step1c4_participant_account_link_and_self_service_rbac(
 ):
     health = client.get("/health")
     assert health.status_code == 200
-    assert health.json()["version"] == "0.5.0-step1c4"
+    assert health.json()["version"] == "0.6.0-step1c5"
 
     # The seeded demo participant login remains safely unlinked until an
     # authorized study operator explicitly links it.

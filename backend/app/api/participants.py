@@ -3,7 +3,7 @@ from __future__ import annotations
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -20,6 +20,7 @@ from app.db.base import utcnow
 from app.db.session import get_db
 from app.models import (
     AllocationState,
+    AuditEvent,
     Participant,
     ParticipantAllocation,
     Role,
@@ -29,6 +30,7 @@ from app.schemas.common import (
     AllocationSummaryOut,
     ParticipantAccountLinkIn,
     ParticipantAccountLinkOut,
+    ParticipantAuditTrailOut,
     ParticipantAllocationOut,
     ParticipantMetricsOut,
     ParticipantOut,
@@ -110,12 +112,19 @@ def participant_metrics(
         )
         or 0
     )
+    linked_accounts = int(
+        db.scalar(
+            select(func.count(Participant.id)).where(Participant.user_id.is_not(None))
+        )
+        or 0
+    )
     groups = _group_counts(db)
     return ParticipantMetricsOut(
         participants=total,
         enrolled=enrolled,
         allocated=allocated,
         not_allocated=not_allocated,
+        linked_accounts=linked_accounts,
         remaining_target=max(TARGET_PARTICIPANTS - total, 0),
         humorbot=groups["HumorBot"],
         starcasm=groups["STARCASM"],
@@ -464,6 +473,42 @@ def get_participant_allocation(
     if allocation is None:
         raise HTTPException(status_code=404, detail="Participant is not allocated.")
     return allocation
+
+
+@router.get("/{participant_id}/audit-trail", response_model=ParticipantAuditTrailOut)
+def get_participant_audit_trail(
+    participant_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(*PARTICIPANT_MANAGEMENT_ROLES)),
+):
+    participant = db.get(Participant, participant_id)
+    if participant is None:
+        raise HTTPException(status_code=404, detail="Participant not found.")
+
+    events = list(
+        db.scalars(
+            select(AuditEvent)
+            .where(
+                or_(
+                    (
+                        (AuditEvent.entity_type == "recruitment_application")
+                        & (AuditEvent.entity_id == participant.application_id)
+                    ),
+                    (
+                        (AuditEvent.entity_type == "participant")
+                        & (AuditEvent.entity_id == participant.id)
+                    ),
+                )
+            )
+            .order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
+        )
+    )
+    return ParticipantAuditTrailOut(
+        participant_id=participant.id,
+        participant_code=participant.participant_code,
+        application_id=participant.application_id,
+        events=events,
+    )
 
 
 @router.get("/{participant_id}", response_model=ParticipantOut)

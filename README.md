@@ -1,4 +1,4 @@
-# AI Research Study Management Platform — Step 1C.4 (0.5.0)
+# AI Research Study Management Platform — Step 1C.5 (0.6.0)
 
 Step 1A establishes the core platform used to manage the HumorBot/STARCASM research project.
 
@@ -244,3 +244,18 @@ Deployment verification is documented in `STEP1C3_ACCEPTANCE.md` and automated b
 Deployment verification is documented in `STEP1C4_ACCEPTANCE.md` and automated by `scripts/verify_step1c4.ps1`.
 
 Production invitation delivery, password reset, multi-factor authentication and participant study sessions remain deferred. Use synthetic credentials in the demo environment.
+
+
+## Step 1C.5 v0.6.0 — Audit + Acceptance Testing
+
+- Adds a correlated participant audit-trail endpoint combining application, eligibility review, selection, enrollment, allocation and account-link events.
+- Removes request IP addresses from the participant-management audit-trail response while preserving actor, entity, timestamp and privacy-safe event details.
+- Displays the chronological Step 1C audit trace in participant detail.
+- Adds linked-account totals to participant-management metrics and the dashboard.
+- Adds a consolidated backend test for lifecycle locks, idempotency, allocation traceability, account immutability, fresh-login persistence, privacy, RBAC and dashboard-count reconciliation.
+- Adds a live PowerShell verifier for the complete application-to-participant-account workflow.
+- Keeps the accepted Step 1C.1–1C.4 behavior and database schema unchanged.
+
+Deployment verification is documented in `STEP1C5_ACCEPTANCE.md` and automated by `scripts/verify_step1c5.ps1`.
+
+Step 1C engineering acceptance does not approve `balanced_random_v1` for live research. Final protocol-defined stratification and governance approval are still required.

@@ -7,6 +7,7 @@ import {
   Milestone,
   Participant,
   ParticipantAllocation,
+  ParticipantAuditTrail,
   ParticipantMetrics,
   ParticipantSelf,
   participantApi,
@@ -169,7 +170,7 @@ function LoginScreen({
         <p className="eyebrow">Research Operations</p>
         <h1>AI Research Study Management Platform</h1>
         <p className="muted">
-          Step 1C.4 · Participant account & RBAC integration
+          Step 1C.5 · Audit & acceptance testing
         </p>
 
         <form onSubmit={submit} className="stack">
@@ -222,8 +223,8 @@ function ComingSoon({ title }: { title: string }) {
       <h2>{title}</h2>
       <p className="muted">
         The navigation position is reserved now so later study modules fit
-        into the same architecture. Step 1C.4 links participant-only accounts
-        to enrolled identities; pre/post tests and model-study interactions remain later phases.
+        into the same architecture. Step 1C.5 closes the participant lifecycle
+        with correlated audit and acceptance evidence; study activities remain later phases.
       </p>
     </section>
   );
@@ -256,7 +257,7 @@ function Overview({
             STARCASM and control-group study.
           </p>
         </div>
-        <span className="status-pill">Step 1C.4</span>
+        <span className="status-pill">Step 1C.5</span>
       </div>
 
       <div className="metric-grid">
@@ -281,7 +282,7 @@ function Overview({
 
         <section className="panel">
           <p className="eyebrow">Current stage</p>
-          <h2>Participant account & RBAC integration</h2>
+          <h2>Step 1C acceptance closure</h2>
           <ul className="checklist">
             <li>Step 1A foundation accepted</li>
             <li>Public synthetic application intake</li>
@@ -296,6 +297,8 @@ function Overview({
             <li>Pseudonymous participant detail view</li>
             <li>Participant-only account linkage</li>
             <li>Own-record participant portal</li>
+            <li>Correlated participant audit trail</li>
+            <li>End-to-end acceptance and count reconciliation</li>
           </ul>
         </section>
       </div>
@@ -664,10 +667,10 @@ function Recruitment({
           <p className="eyebrow">Recruitment operations</p>
           <h1>Applications, Selection & Enrollment</h1>
           <p className="muted">
-            Step 1C.4 preserves the accepted eligibility, selection, enrollment and allocation boundaries while adding participant-account linkage and own-record access.
+            Step 1C.5 verifies the complete accepted participant lifecycle, correlated audit trail, persistence, authorization boundaries and dashboard counts.
           </p>
         </div>
-        <span className="status-pill">Step 1C.4</span>
+        <span className="status-pill">Step 1C.5</span>
       </div>
 
       {message && <div className="alert">{message}</div>}
@@ -821,8 +824,12 @@ function ParticipantsPage({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedParticipantId, setSelectedParticipantId] = useState("");
   const [selectedAllocation, setSelectedAllocation] = useState<ParticipantAllocation | null>(null);
+  const [selectedAuditTrail, setSelectedAuditTrail] = useState<ParticipantAuditTrail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState("");
+  const [auditRefreshKey, setAuditRefreshKey] = useState(0);
   const [accountBusy, setAccountBusy] = useState(false);
 
   const pageSize = 25;
@@ -951,6 +958,37 @@ function ParticipantsPage({
     };
   }, [selectedParticipant?.id, selectedParticipant?.allocation_status]);
 
+  useEffect(() => {
+    if (!selectedParticipant) {
+      setSelectedAuditTrail(null);
+      setAuditLoading(false);
+      setAuditError("");
+      return;
+    }
+
+    let active = true;
+    setAuditLoading(true);
+    setAuditError("");
+    participantApi
+      .auditTrail(selectedParticipant.id)
+      .then((trail) => {
+        if (active) setSelectedAuditTrail(trail);
+      })
+      .catch((err) => {
+        if (active) {
+          setSelectedAuditTrail(null);
+          setAuditError(err instanceof Error ? err.message : "Unable to load audit trail.");
+        }
+      })
+      .finally(() => {
+        if (active) setAuditLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedParticipant?.id, auditRefreshKey]);
+
   function clearFilters() {
     setSearch("");
     setLifecycleFilter("all");
@@ -970,6 +1008,7 @@ function ParticipantsPage({
       const allocation = await participantApi.allocate(participant.id);
       setMessage(`${participant.participant_code} allocated to ${allocation.study_group}.`);
       await reload();
+      setAuditRefreshKey((value) => value + 1);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Unable to allocate participant.");
     } finally {
@@ -993,6 +1032,7 @@ function ParticipantsPage({
       form.reset();
       setMessage(`${link.participant_code} linked to a participant-only account.`);
       await reload();
+      setAuditRefreshKey((value) => value + 1);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Unable to link participant account.");
     } finally {
@@ -1012,16 +1052,17 @@ function ParticipantsPage({
             details remain separated from this workspace.
           </p>
         </div>
-        <span className="status-pill">Step 1C.4</span>
+        <span className="status-pill">Step 1C.5</span>
       </div>
 
       {message && <div className="alert">{message}</div>}
       {loadError && <div className="alert error">{loadError}</div>}
 
-      <div className="metric-grid">
+      <div className="metric-grid participant-metrics">
         <Metric label="Total participants" value={metrics?.participants ?? 0} />
         <Metric label="Enrolled" value={metrics?.enrolled ?? 0} />
         <Metric label="Allocated" value={metrics?.allocated ?? 0} />
+        <Metric label="Linked accounts" value={metrics?.linked_accounts ?? 0} />
         <Metric label="Remaining target" value={metrics?.remaining_target ?? 600} />
       </div>
 
@@ -1291,6 +1332,33 @@ function ParticipantsPage({
                   <div><dt>Allocated at</dt><dd>{formatDate(selectedAllocation.allocated_at)}</dd></div>
                   <div><dt>Immutable record ID</dt><dd>{selectedAllocation.id}</dd></div>
                 </dl>
+              )}
+            </div>
+
+            <div className="audit-trail-block">
+              <div className="audit-trail-heading">
+                <strong>Step 1C audit trace</strong>
+                {selectedAuditTrail && <span className="tag">{selectedAuditTrail.events.length} events</span>}
+              </div>
+              <p className="tiny">
+                Correlated application, selection, enrollment, allocation and account-link evidence.
+              </p>
+              {auditLoading && <p className="tiny">Loading participant audit trail…</p>}
+              {auditError && <div className="alert error">{auditError}</div>}
+              {selectedAuditTrail && !selectedAuditTrail.events.length && (
+                <p className="tiny">No correlated audit events were found.</p>
+              )}
+              {selectedAuditTrail && selectedAuditTrail.events.length > 0 && (
+                <ol className="participant-audit-list">
+                  {selectedAuditTrail.events.map((event) => (
+                    <li key={event.id}>
+                      <strong>{event.action}</strong>
+                      <time>{formatDate(event.created_at)}</time>
+                      <small>{event.entity_type} · {event.entity_id || "No entity"}</small>
+                      <small>Actor: {event.actor_user_id || "Public/system"}</small>
+                    </li>
+                  ))}
+                </ol>
               )}
             </div>
           </>

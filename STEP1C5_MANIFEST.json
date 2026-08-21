@@ -1,0 +1,45 @@
+{
+  "step": "1C.5",
+  "version": "0.6.0-step1c5",
+  "title": "Audit + Acceptance Testing",
+  "includes": [
+    "correlated participant lifecycle audit-trail endpoint",
+    "privacy-safe participant audit response without IP addresses",
+    "chronological participant audit trace in management UI",
+    "linked-account participant metric",
+    "complete application-to-account acceptance test",
+    "enrollment, allocation and account-link idempotency checks",
+    "post-enrollment eligibility and selection immutability checks",
+    "allocation basis and immutable record traceability checks",
+    "fresh-administrator and fresh-participant login persistence checks",
+    "participant self-service privacy and cross-boundary RBAC checks",
+    "participant, allocation, group, capacity, linked-account and recruitment count reconciliation",
+    "Windows PowerShell-compatible consolidated deployment verifier"
+  ],
+  "audit_actions": [
+    "recruitment.application_submitted",
+    "recruitment.application_reviewed",
+    "participant.selection_recorded",
+    "participant.enrolled",
+    "participant.allocated",
+    "participant.account_linked"
+  ],
+  "privacy_boundary": {
+    "participant_audit_trail_is_staff_only": true,
+    "participant_audit_trail_exposes_ip_address": false,
+    "participant_self_endpoint_is_own_record_only": true,
+    "participant_self_exposes_application_or_allocation_trace": false
+  },
+  "unchanged": [
+    "balanced_random_v1 allocation behavior",
+    "200 HumorBot / 200 STARCASM / 200 Control capacity",
+    "allocation protocol_finalized remains false",
+    "Step 1C.1 through Step 1C.4 lifecycle and authorization behavior"
+  ],
+  "database_migration": "none; existing audit_events and participant constraints are reused",
+  "deferred": [
+    "final protocol-approved randomization and stratification",
+    "production participant invitation and credential recovery",
+    "participant pre/post tests and study sessions"
+  ]
+}

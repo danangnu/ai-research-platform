@@ -286,6 +286,7 @@ class ParticipantMetricsOut(BaseModel):
     enrolled: int
     allocated: int
     not_allocated: int
+    linked_accounts: int
     remaining_target: int
     humorbot: int = 0
     starcasm: int = 0
@@ -316,3 +317,20 @@ class ParticipantSelfOut(BaseModel):
     assigned_condition: str | None
     enrolled_at: datetime
     account_status: str
+
+
+class ParticipantAuditEventOut(ORMModel):
+    id: str
+    actor_user_id: str | None
+    action: str
+    entity_type: str
+    entity_id: str | None
+    details: dict[str, Any]
+    created_at: datetime
+
+
+class ParticipantAuditTrailOut(BaseModel):
+    participant_id: str
+    participant_code: str
+    application_id: str
+    events: list[ParticipantAuditEventOut]

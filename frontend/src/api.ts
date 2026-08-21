@@ -346,6 +346,7 @@ export type ParticipantMetrics = {
   enrolled: number;
   allocated: number;
   not_allocated: number;
+  linked_accounts: number;
   remaining_target: number;
   humorbot: number;
   starcasm: number;
@@ -397,6 +398,21 @@ export type ParticipantSelf = {
   account_status: "linked";
 };
 
+export type ParticipantAuditTrail = {
+  participant_id: string;
+  participant_code: string;
+  application_id: string;
+  events: Array<{
+    id: string;
+    actor_user_id: string | null;
+    action: string;
+    entity_type: string;
+    entity_id: string | null;
+    details: Record<string, unknown>;
+    created_at: string;
+  }>;
+};
+
 export const participantApi = {
   participants: () => request<Participant[]>("/api/participants"),
   metrics: () => request<ParticipantMetrics>("/api/participants/metrics"),
@@ -414,4 +430,6 @@ export const participantApi = {
       body: JSON.stringify(body),
     }),
   self: () => request<ParticipantSelf>("/api/participant/me"),
+  auditTrail: (participantId: string) =>
+    request<ParticipantAuditTrail>(`/api/participants/${participantId}/audit-trail`),
 };

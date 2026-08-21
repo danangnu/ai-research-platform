@@ -319,6 +319,10 @@ nav small {
   margin-bottom: 16px;
 }
 
+.metric-grid.participant-metrics {
+  grid-template-columns: repeat(5, minmax(135px, 1fr));
+}
+
 .metric,
 .panel {
   border: 1px solid #e0e5ee;
@@ -522,6 +526,7 @@ nav small {
 
 @media (max-width: 1000px) {
   .metric-grid,
+  .metric-grid.participant-metrics,
   .three-col {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -554,6 +559,7 @@ nav small {
   }
 
   .metric-grid,
+  .metric-grid.participant-metrics,
   .three-col {
     grid-template-columns: 1fr;
   }
@@ -1047,6 +1053,50 @@ nav small {
 .account-linked {
   color: #166534;
   background: #dcfce7;
+}
+
+/* Step 1C.5 correlated audit trace */
+.audit-trail-block {
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.audit-trail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.participant-audit-list {
+  display: grid;
+  gap: 9px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.participant-audit-list li {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.participant-audit-list strong {
+  color: #3730a3;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.75rem;
+}
+
+.participant-audit-list time,
+.participant-audit-list small {
+  color: #64748b;
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 1180px) {
