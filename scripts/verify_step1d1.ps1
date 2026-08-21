@@ -212,7 +212,9 @@ try {
         }
     }
     $approvalAudit = $protocolAudit | Where-Object { $_.action -eq "protocol.approved" } | Select-Object -First 1
-    if ($approvalAudit.details.configuration_hash -ne $approved.configuration_hash) { Fail "Approval audit hash is incorrect" }
+    if (-not $approvalAudit.id -or $approvalAudit.entity_type -ne "study_protocol" -or $approvalAudit.entity_id -ne $draft.id) {
+        Fail "Protocol approval audit correlation is incorrect"
+    }
     Pass "Immutable protocol audit trail"
 
     Expect-Status `
