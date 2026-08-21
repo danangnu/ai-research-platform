@@ -65,7 +65,12 @@ def seed_roles_and_admin(db: Session) -> None:
                 )
                 participant.roles.append(roles_by_name[PARTICIPANT])
                 db.add(participant)
-            elif PARTICIPANT not in {role.name for role in participant.roles}:
-                participant.roles.append(roles_by_name[PARTICIPANT])
+            else:
+                # Demo-only fixture: keep the environment password authoritative
+                # so an exposed demo credential can be rotated by redeploying.
+                participant.full_name = settings.demo_participant_full_name
+                participant.password_hash = hash_password(participant_password)
+                participant.is_active = True
+                participant.roles = [roles_by_name[PARTICIPANT]]
 
     db.commit()

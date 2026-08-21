@@ -33,6 +33,62 @@ const NAV: { page: Page; label: string; step1a: boolean }[] = [
   { page: "admin", label: "Admin", step1a: true },
 ];
 
+const PROJECT_READ_ROLES = new Set([
+  "PROJECT_ADMIN",
+  "RESEARCH_LEAD",
+  "AI_ML_RESEARCH_ENGINEER",
+  "RESEARCH_ASSISTANT",
+]);
+
+const PROJECT_WRITE_ROLES = new Set([
+  "PROJECT_ADMIN",
+  "RESEARCH_LEAD",
+]);
+
+const PROJECT_TASK_WRITE_ROLES = new Set([
+  "PROJECT_ADMIN",
+  "RESEARCH_LEAD",
+  "AI_ML_RESEARCH_ENGINEER",
+  "RESEARCH_ASSISTANT",
+]);
+
+const ADMIN_ROLES = new Set([
+  "PROJECT_ADMIN",
+  "RESEARCH_LEAD",
+]);
+
+function hasAnyRole(user: User, allowed: Set<string>) {
+  return user.roles.some((role) => allowed.has(role));
+}
+
+function canReadProjects(user: User) {
+  return hasAnyRole(user, PROJECT_READ_ROLES);
+}
+
+function canWriteProjects(user: User) {
+  return hasAnyRole(user, PROJECT_WRITE_ROLES);
+}
+
+function canWriteProjectTasks(user: User) {
+  return hasAnyRole(user, PROJECT_TASK_WRITE_ROLES);
+}
+
+function canAdminister(user: User) {
+  return hasAnyRole(user, ADMIN_ROLES);
+}
+
+function visibleNavigation(user: User) {
+  if (!canReadProjects(user)) {
+    return NAV.filter((item) =>
+      item.page === "overview" || item.page === "study"
+    );
+  }
+
+  return NAV.filter((item) =>
+    item.page !== "admin" || canAdminister(user)
+  );
+}
+
 const DEMO_MODE =
   String(import.meta.env.VITE_DEMO_MODE || "false").toLowerCase() === "true";
 
@@ -197,6 +253,45 @@ function Overview({
   );
 }
 
+function LimitedOverview({ user }: { user: User }) {
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Participant access</p>
+          <h1>Study Portal</h1>
+          <p className="muted">
+            Signed in as {user.full_name}. Project-management and
+            administrative research data are not available to this role.
+          </p>
+        </div>
+        <span className="status-pill">{user.roles[0] || "USER"}</span>
+      </div>
+
+      <div className="two-col">
+        <section className="panel">
+          <p className="eyebrow">Access boundary</p>
+          <h2>Participant workspace</h2>
+          <p className="muted">
+            Step 1A verifies authentication and least-privilege access.
+            Participant study activities, pre/post testing and assigned
+            sessions will be added in later study phases.
+          </p>
+        </section>
+
+        <section className="panel">
+          <p className="eyebrow">Security</p>
+          <h2>Management data protected</h2>
+          <p className="muted">
+            Project, risk, milestone, study-site and audit data are restricted
+            by the backend RBAC policy and are not loaded into this view.
+          </p>
+        </section>
+      </div>
+    </>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="metric">
@@ -283,6 +378,8 @@ function ProjectPage({
   tasks,
   risks,
   reload,
+  allowProjectWrite,
+  allowTaskWrite,
 }: {
   projects: Project[];
   selectedProject: Project | null;
@@ -291,6 +388,8 @@ function ProjectPage({
   tasks: StudyTask[];
   risks: Risk[];
   reload: (projectId?: string) => Promise<void>;
+  allowProjectWrite: boolean;
+  allowTaskWrite: boolean;
 }) {
   const [message, setMessage] = useState("");
 
@@ -409,12 +508,18 @@ function ProjectPage({
       <div className="two-col">
         <section className="panel">
           <h2>Create project</h2>
-          <form className="compact-form" onSubmit={addProject}>
-            <input name="code" placeholder="Project code" required />
-            <input name="name" placeholder="Project name" required />
-            <textarea name="description" placeholder="Description" rows={3} />
-            <button className="primary">Create project</button>
-          </form>
+          {allowProjectWrite ? (
+            <form className="compact-form" onSubmit={addProject}>
+              <input name="code" placeholder="Project code" required />
+              <input name="name" placeholder="Project name" required />
+              <textarea name="description" placeholder="Description" rows={3} />
+              <button className="primary">Create project</button>
+            </form>
+          ) : (
+            <p className="muted">
+              Your role can view project information but cannot create projects.
+            </p>
+          )}
         </section>
 
         <section className="panel">
@@ -456,46 +561,58 @@ function ProjectPage({
           <div className="three-col">
             <section className="panel">
               <h2>Add milestone</h2>
-              <form className="compact-form" onSubmit={addMilestone}>
-                <input name="code" placeholder="M1" required />
-                <input name="name" placeholder="Milestone name" required />
-                <button>Add milestone</button>
-              </form>
+              {allowProjectWrite ? (
+                <form className="compact-form" onSubmit={addMilestone}>
+                  <input name="code" placeholder="M1" required />
+                  <input name="name" placeholder="Milestone name" required />
+                  <button>Add milestone</button>
+                </form>
+              ) : (
+                <p className="muted">Milestone creation is restricted.</p>
+              )}
             </section>
 
             <section className="panel">
               <h2>Add task</h2>
-              <form className="compact-form" onSubmit={addTask}>
-                <input name="title" placeholder="Task title" required />
-                <select name="milestone_id">
-                  <option value="">No milestone</option>
-                  {milestones.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.code} · {item.name}
-                    </option>
-                  ))}
-                </select>
-                <select name="priority" defaultValue="medium">
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-                <button>Add task</button>
-              </form>
+              {allowTaskWrite ? (
+                <form className="compact-form" onSubmit={addTask}>
+                  <input name="title" placeholder="Task title" required />
+                  <select name="milestone_id">
+                    <option value="">No milestone</option>
+                    {milestones.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.code} · {item.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select name="priority" defaultValue="medium">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                  <button>Add task</button>
+                </form>
+              ) : (
+                <p className="muted">Task creation is restricted.</p>
+              )}
             </section>
 
             <section className="panel">
               <h2>Add risk</h2>
-              <form className="compact-form" onSubmit={addRisk}>
-                <input name="title" placeholder="Risk title" required />
-                <select name="level" defaultValue="medium">
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-                <textarea name="mitigation" placeholder="Mitigation" rows={2} />
-                <button>Add risk</button>
-              </form>
+              {allowTaskWrite ? (
+                <form className="compact-form" onSubmit={addRisk}>
+                  <input name="title" placeholder="Risk title" required />
+                  <select name="level" defaultValue="medium">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                  <textarea name="mitigation" placeholder="Mitigation" rows={2} />
+                  <button>Add risk</button>
+                </form>
+              ) : (
+                <p className="muted">Risk creation is restricted.</p>
+              )}
             </section>
           </div>
 
@@ -545,7 +662,7 @@ function ProjectPage({
                     </span>
                   </div>
 
-                  {task.status !== "completed" && (
+                  {allowTaskWrite && task.status !== "completed" && (
                     <button onClick={() => completeTask(task)}>
                       Mark complete
                     </button>
@@ -676,49 +793,71 @@ export default function App() {
   const [sites, setSites] = useState<StudySite[]>([]);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
 
+  function clearProjectState() {
+    setProjects([]);
+    setSelectedProject(null);
+    setMilestones([]);
+    setTasks([]);
+    setRisks([]);
+  }
+
+  function clearAdminState() {
+    setSites([]);
+    setAudit([]);
+  }
+
+  function clearRoleScopedState() {
+    clearProjectState();
+    clearAdminState();
+  }
+
   async function loadAll(projectId?: string) {
     if (!user) return;
 
-    const projectRows = await api.projects();
-    setProjects(projectRows);
+    if (canReadProjects(user)) {
+      const projectRows = await api.projects();
+      setProjects(projectRows);
 
-    let current = projectId
-      ? projectRows.find((project) => project.id === projectId) || null
-      : selectedProject;
+      let current = projectId
+        ? projectRows.find((project) => project.id === projectId) || null
+        : selectedProject;
 
-    if (!current && projectRows.length) {
-      current = projectRows[0];
-    } else if (current) {
-      current = projectRows.find((project) => project.id === current!.id) || null;
-    }
+      if (!current && projectRows.length) {
+        current = projectRows[0];
+      } else if (current) {
+        current =
+          projectRows.find((project) => project.id === current!.id) || null;
+      }
 
-    setSelectedProject(current);
+      setSelectedProject(current);
 
-    if (current) {
-      const [milestoneRows, taskRows, riskRows] = await Promise.all([
-        api.milestones(current.id),
-        api.tasks(current.id),
-        api.risks(current.id),
-      ]);
-      setMilestones(milestoneRows);
-      setTasks(taskRows);
-      setRisks(riskRows);
+      if (current) {
+        const [milestoneRows, taskRows, riskRows] = await Promise.all([
+          api.milestones(current.id),
+          api.tasks(current.id),
+          api.risks(current.id),
+        ]);
+        setMilestones(milestoneRows);
+        setTasks(taskRows);
+        setRisks(riskRows);
+      } else {
+        setMilestones([]);
+        setTasks([]);
+        setRisks([]);
+      }
     } else {
-      setMilestones([]);
-      setTasks([]);
-      setRisks([]);
+      clearProjectState();
     }
 
-    if (
-      user.roles.includes("PROJECT_ADMIN") ||
-      user.roles.includes("RESEARCH_LEAD")
-    ) {
+    if (canAdminister(user)) {
       const [siteRows, auditRows] = await Promise.all([
         api.sites(),
         api.audit(),
       ]);
       setSites(siteRows);
       setAudit(auditRows);
+    } else {
+      clearAdminState();
     }
   }
 
@@ -732,8 +871,30 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
+
+    if (!canReadProjects(user)) {
+      clearProjectState();
+    }
+
+    if (!canAdminister(user)) {
+      clearAdminState();
+    }
+
     loadAll().catch(console.error);
   }, [user, selectedProject?.id]);
+
+  const navigation = useMemo(
+    () => (user ? visibleNavigation(user) : []),
+    [user],
+  );
+
+  useEffect(() => {
+    if (!user) return;
+
+    if (!navigation.some((item) => item.page === page)) {
+      setPage("overview");
+    }
+  }, [user, navigation, page]);
 
   const title = useMemo(
     () => NAV.find((item) => item.page === page)?.label || "Overview",
@@ -745,11 +906,21 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginScreen onLogin={setUser} />;
+    return (
+      <LoginScreen
+        onLogin={(nextUser) => {
+          clearRoleScopedState();
+          setPage("overview");
+          setUser(nextUser);
+        }}
+      />
+    );
   }
 
   function logout() {
     setToken(null);
+    clearRoleScopedState();
+    setPage("overview");
     setUser(null);
   }
 
@@ -767,7 +938,7 @@ export default function App() {
         </div>
 
         <nav>
-          {NAV.map((item) => (
+          {navigation.map((item) => (
             <button
               key={item.page}
               className={page === item.page ? "active" : ""}
@@ -787,13 +958,16 @@ export default function App() {
       </aside>
 
       <main className="content">
-        {page === "overview" && (
-          <Overview projects={projects} tasks={tasks} risks={risks} />
-        )}
+        {page === "overview" &&
+          (canReadProjects(user) ? (
+            <Overview projects={projects} tasks={tasks} risks={risks} />
+          ) : (
+            <LimitedOverview user={user} />
+          ))}
 
         {page === "recruitment" && <Recruitment sites={sites} />}
 
-        {page === "project" && (
+        {page === "project" && canReadProjects(user) && (
           <ProjectPage
             projects={projects}
             selectedProject={selectedProject}
@@ -802,10 +976,12 @@ export default function App() {
             tasks={tasks}
             risks={risks}
             reload={loadAll}
+            allowProjectWrite={canWriteProjects(user)}
+            allowTaskWrite={canWriteProjectTasks(user)}
           />
         )}
 
-        {page === "admin" && (
+        {page === "admin" && canAdminister(user) && (
           <AdminPage sites={sites} audit={audit} reload={loadAll} />
         )}
 

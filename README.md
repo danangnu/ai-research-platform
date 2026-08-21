@@ -163,3 +163,12 @@ DEPLOY_RENDER_NEON.md
 
 The online demo intentionally displays a warning not to enter real participant
 or sensitive information.
+
+
+## Step 1A.1 v0.1.3
+
+- Clears project/admin React state when the authenticated identity changes or logs out.
+- Prevents PARTICIPANT/SITE_COORDINATOR sessions from loading project or audit data.
+- Uses role-aware navigation and a participant-safe overview.
+- Aligns project UI actions with backend RBAC permissions.
+- Allows demo participant password rotation through Render environment variables on redeploy.
