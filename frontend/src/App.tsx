@@ -11,6 +11,8 @@ import {
   ParticipantMetrics,
   ParticipantSelf,
   participantApi,
+  ProtocolSummary,
+  ProtocolValidation,
   Project,
   RecruitmentApplication,
   RecruitmentMetrics,
@@ -19,9 +21,11 @@ import {
   Risk,
   SelectionDecision,
   setToken,
+  StudyProtocol,
   StudySite,
   StudyTask,
   User,
+  protocolApi,
 } from "./api";
 
 type Page =
@@ -38,7 +42,7 @@ const NAV: { page: Page; label: string; step1a: boolean }[] = [
   { page: "overview", label: "Overview", step1a: true },
   { page: "recruitment", label: "Recruitment", step1a: true },
   { page: "participants", label: "Participants", step1a: true },
-  { page: "study", label: "Study", step1a: false },
+  { page: "study", label: "Study", step1a: true },
   { page: "models", label: "Models", step1a: false },
   { page: "analysis", label: "Analysis", step1a: false },
   { page: "project", label: "Project", step1a: true },
@@ -108,6 +112,10 @@ function canAllocate(user: User) {
   return hasAnyRole(user, ALLOCATION_ROLES);
 }
 
+function canManageProtocol(user: User) {
+  return hasAnyRole(user, PROJECT_WRITE_ROLES);
+}
+
 function visibleNavigation(user: User) {
   return NAV.filter((item) => {
     if (item.page === "overview") return true;
@@ -170,7 +178,7 @@ function LoginScreen({
         <p className="eyebrow">Research Operations</p>
         <h1>AI Research Study Management Platform</h1>
         <p className="muted">
-          Step 1C.5 · Audit & acceptance testing
+          Step 1D.1 · Protocol & stratification foundation
         </p>
 
         <form onSubmit={submit} className="stack">
@@ -223,8 +231,8 @@ function ComingSoon({ title }: { title: string }) {
       <h2>{title}</h2>
       <p className="muted">
         The navigation position is reserved now so later study modules fit
-        into the same architecture. Step 1C.5 closes the participant lifecycle
-        with correlated audit and acceptance evidence; study activities remain later phases.
+        into the same architecture. Step 1D.1 establishes protocol governance;
+        participant study activities remain later phases.
       </p>
     </section>
   );
@@ -257,7 +265,7 @@ function Overview({
             STARCASM and control-group study.
           </p>
         </div>
-        <span className="status-pill">Step 1C.5</span>
+        <span className="status-pill">Step 1D.1</span>
       </div>
 
       <div className="metric-grid">
@@ -282,7 +290,7 @@ function Overview({
 
         <section className="panel">
           <p className="eyebrow">Current stage</p>
-          <h2>Step 1C acceptance closure</h2>
+          <h2>Protocol & stratification foundation</h2>
           <ul className="checklist">
             <li>Step 1A foundation accepted</li>
             <li>Public synthetic application intake</li>
@@ -299,6 +307,10 @@ function Overview({
             <li>Own-record participant portal</li>
             <li>Correlated participant audit trail</li>
             <li>End-to-end acceptance and count reconciliation</li>
+            <li>Versioned protocol registry</li>
+            <li>Approval-readiness validation</li>
+            <li>Immutable approved configuration hash</li>
+            <li>Activation held for final stratified engine</li>
           </ul>
         </section>
       </div>
@@ -1369,6 +1381,393 @@ function ParticipantsPage({
   );
 }
 
+function StudyProtocolPage({
+  selectedProject,
+  allowWrite,
+}: {
+  selectedProject: Project | null;
+  allowWrite: boolean;
+}) {
+  const [protocols, setProtocols] = useState<StudyProtocol[]>([]);
+  const [summary, setSummary] = useState<ProtocolSummary | null>(null);
+  const [selectedId, setSelectedId] = useState("");
+  const [validation, setValidation] = useState<ProtocolValidation | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const selected = protocols.find((item) => item.id === selectedId) || null;
+
+  async function reload(preferredId?: string) {
+    if (!selectedProject) {
+      setProtocols([]);
+      setSummary(null);
+      setSelectedId("");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const [rows, nextSummary] = await Promise.all([
+        protocolApi.protocols(selectedProject.id),
+        protocolApi.summary(selectedProject.id),
+      ]);
+      setProtocols(rows);
+      setSummary(nextSummary);
+      const nextId = preferredId || selectedId;
+      setSelectedId(
+        rows.some((item) => item.id === nextId)
+          ? nextId
+          : rows[0]?.id || "",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load study protocols.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    setSelectedId("");
+    setValidation(null);
+    reload().catch(console.error);
+  }, [selectedProject?.id]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setValidation(null);
+      return;
+    }
+    protocolApi
+      .validation(selectedId)
+      .then(setValidation)
+      .catch((err) => setError(err instanceof Error ? err.message : "Unable to validate protocol."));
+  }, [selectedId, selected?.updated_at]);
+
+  function levelCode(label: string, index: number) {
+    const code = label
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    return code || `level_${index + 1}`;
+  }
+
+  function parseLevels(value: FormDataEntryValue | null) {
+    return String(value || "")
+      .split(",")
+      .map((label) => label.trim())
+      .filter(Boolean)
+      .map((label, index) => ({ code: levelCode(label, index), label }));
+  }
+
+  function parseBlockSizes(value: FormDataEntryValue | null) {
+    return String(value || "")
+      .split(",")
+      .map((item) => Number(item.trim()))
+      .filter((item) => Number.isInteger(item) && item > 0);
+  }
+
+  function parseTaskBlocks(value: FormDataEntryValue | null) {
+    return String(value || "")
+      .split(",")
+      .map((label) => label.trim())
+      .filter(Boolean)
+      .map((label, index) => ({ code: `task_${index + 1}`, label }));
+  }
+
+  async function createProtocol(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedProject) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    setBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      const created = await protocolApi.create({
+        project_id: selectedProject.id,
+        version: data.get("version"),
+        title: data.get("title"),
+        objective: data.get("objective") || "",
+        randomization_unit: "participant",
+        allocation_method: "stratified_permuted_block",
+        target_total: 600,
+        conditions: [
+          { code: "HumorBot", label: "HumorBot", target_n: 200 },
+          { code: "STARCASM", label: "STARCASM", target_n: 200 },
+          { code: "Control", label: "Control", target_n: 200 },
+        ],
+        stratification_factors: [
+          {
+            key: "experience_band",
+            label: "Professional experience band",
+            source_field: "professional_experience_band",
+            required: true,
+            levels: parseLevels(data.get("experience_levels")),
+          },
+        ],
+        task_blocks: parseTaskBlocks(data.get("task_blocks")),
+        permitted_block_sizes: parseBlockSizes(data.get("block_sizes")),
+        protocol_document_ref: data.get("protocol_document_ref") || "",
+        change_summary: data.get("change_summary") || "Initial draft.",
+      });
+      form.reset();
+      setMessage(`Protocol ${created.version} created as a draft.`);
+      await reload(created.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to create protocol.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function updateDraft(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected || selected.status !== "draft") return;
+    const data = new FormData(event.currentTarget);
+    setBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      await protocolApi.update(selected.id, {
+        objective: data.get("objective") || "",
+        protocol_document_ref: data.get("protocol_document_ref") || "",
+        change_summary: data.get("change_summary") || "",
+        permitted_block_sizes: parseBlockSizes(data.get("block_sizes")),
+        stratification_factors: [
+          {
+            key: "experience_band",
+            label: "Professional experience band",
+            source_field: "professional_experience_band",
+            required: true,
+            levels: parseLevels(data.get("experience_levels")),
+          },
+        ],
+        task_blocks: parseTaskBlocks(data.get("task_blocks")),
+      });
+      setMessage(`Draft ${selected.version} updated.`);
+      await reload(selected.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update draft.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function approveSelected() {
+    if (!selected || selected.status !== "draft") return;
+    if (!window.confirm("Approve this protocol version? Approval stores its hash and makes the version immutable.")) {
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      const approved = await protocolApi.approve(selected.id);
+      setMessage(`Protocol ${approved.version} approved and locked.`);
+      await reload(approved.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to approve protocol.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const experienceLevels = selected?.stratification_factors
+    .find((factor) => factor.key === "experience_band")
+    ?.levels.map((level) => level.label).join(", ") || "";
+  const taskBlocks = selected?.task_blocks.map((task) => task.label).join(", ") || "";
+
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Study governance</p>
+          <h1>Protocol & Stratification</h1>
+          <p className="muted">
+            Version, validate and approve the 600-participant study configuration before
+            connecting it to the final allocation engine.
+          </p>
+        </div>
+        <span className="status-pill">Step 1D.1</span>
+      </div>
+
+      {message && <div className="alert">{message}</div>}
+      {error && <div className="alert error">{error}</div>}
+
+      <div className="metric-grid protocol-metrics">
+        <Metric label="Protocol versions" value={summary?.total_versions ?? 0} />
+        <Metric label="Drafts" value={summary?.drafts ?? 0} />
+        <Metric label="Approved" value={summary?.approved ?? 0} />
+        <Metric label="Active" value={summary?.active ?? 0} />
+        <Metric label="Engine connected" value={summary?.allocation_engine_connected ? "Yes" : "No"} />
+      </div>
+
+      <div className="protocol-warning">
+        <strong>Activation gate</strong>
+        <p>
+          An approved version is still not active. Step 1D.2 must connect the protocol hash,
+          participant strata and final allocation engine before activation is permitted.
+        </p>
+      </div>
+
+      {!selectedProject ? (
+        <section className="panel">
+          <h2>Select a project first</h2>
+          <p className="muted">Create or select a project from the Project page before registering a protocol.</p>
+        </section>
+      ) : (
+        <div className="protocol-layout">
+          <div className="stack">
+            {allowWrite && (
+              <section className="panel">
+                <p className="eyebrow">New immutable version</p>
+                <h2>Create protocol draft</h2>
+                <form className="compact-form" onSubmit={createProtocol}>
+                  <div className="two-field-row">
+                    <label>Version<input name="version" placeholder="1.0-draft" required /></label>
+                    <label>Title<input name="title" placeholder="HumorBot/STARCASM study protocol" required /></label>
+                  </div>
+                  <label>Objective<textarea name="objective" rows={2} placeholder="Protocol objective" /></label>
+                  <label>
+                    Experience-band levels
+                    <input name="experience_levels" placeholder="Enter protocol-approved bands, separated by commas" required />
+                  </label>
+                  <label>
+                    Experimental task blocks
+                    <input name="task_blocks" placeholder="Task A, Task B, Task C, Task D" required />
+                  </label>
+                  <div className="two-field-row">
+                    <label>Permitted block sizes<input name="block_sizes" defaultValue="3, 6" required /></label>
+                    <label>Approved document reference<input name="protocol_document_ref" placeholder="Document ID, registry URL or controlled reference" required /></label>
+                  </div>
+                  <label>Change summary<input name="change_summary" defaultValue="Initial protocol draft." /></label>
+                  <button className="primary" disabled={busy}>{busy ? "Saving…" : "Create draft"}</button>
+                </form>
+              </section>
+            )}
+
+            <section className="panel">
+              <div className="panel-heading-row">
+                <div><p className="eyebrow">Protocol registry</p><h2>Version history</h2></div>
+                {loading && <span className="tag">Refreshing…</span>}
+              </div>
+              <div className="list protocol-list">
+                {protocols.map((protocol) => (
+                  <button
+                    type="button"
+                    className={`protocol-row ${protocol.id === selectedId ? "selected" : ""}`}
+                    key={protocol.id}
+                    onClick={() => setSelectedId(protocol.id)}
+                  >
+                    <div><strong>{protocol.version}</strong><span>{protocol.title}</span></div>
+                    <span className={`tag protocol-${protocol.status}`}>{protocol.status}</span>
+                  </button>
+                ))}
+                {!loading && !protocols.length && <p className="muted">No protocol versions registered.</p>}
+              </div>
+            </section>
+          </div>
+
+          <section className="panel protocol-detail-panel">
+            <p className="eyebrow">Protocol detail</p>
+            {!selected ? (
+              <div className="participant-state empty-state"><strong>Select a protocol version</strong></div>
+            ) : (
+              <>
+                <div className="participant-detail-heading">
+                  <div><h2>{selected.version}</h2><p className="tiny">{selected.title}</p></div>
+                  <span className={`tag protocol-${selected.status}`}>{selected.status}</span>
+                </div>
+                <dl className="detail-grid participant-detail-grid">
+                  <div><dt>Project</dt><dd>{selectedProject.code}</dd></div>
+                  <div><dt>Randomization unit</dt><dd>{selected.randomization_unit}</dd></div>
+                  <div><dt>Allocation method</dt><dd>{selected.allocation_method.replaceAll("_", " ")}</dd></div>
+                  <div><dt>Target</dt><dd>{selected.target_total}</dd></div>
+                  <div><dt>Document reference</dt><dd>{selected.protocol_document_ref || "Not supplied"}</dd></div>
+                  <div><dt>Configuration hash</dt><dd className="hash-value">{selected.configuration_hash || "Stored only on approval"}</dd></div>
+                </dl>
+
+                <div className="protocol-section">
+                  <strong>Conditions</strong>
+                  {selected.conditions.map((condition) => (
+                    <div className="protocol-config-row" key={condition.code}>
+                      <span>{condition.label}</span><b>{condition.target_n}</b>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="protocol-section">
+                  <strong>Stratification</strong>
+                  {selected.stratification_factors.map((factor) => (
+                    <div key={factor.key} className="protocol-factor">
+                      <span>{factor.label}</span>
+                      <div className="role-cloud">
+                        {factor.levels.map((level) => <span key={level.code}>{level.label}</span>)}
+                      </div>
+                    </div>
+                  ))}
+                  <p className="tiny">Permitted block sizes: {selected.permitted_block_sizes.join(", ") || "Not configured"}</p>
+                </div>
+
+                <div className="protocol-section">
+                  <strong>Experimental task blocks</strong>
+                  <div className="role-cloud">
+                    {selected.task_blocks.map((task) => <span key={task.code}>{task.label}</span>)}
+                  </div>
+                </div>
+
+                {validation && (
+                  <div className={`validation-card ${validation.approval_ready ? "ready" : "blocked"}`}>
+                    <div className="panel-heading-row">
+                      <strong>{validation.approval_ready ? "Approval ready" : "Approval blocked"}</strong>
+                      <span className="tag">{validation.errors.length} errors</span>
+                    </div>
+                    {validation.errors.map((item) => <p key={item}>• {item}</p>)}
+                    {validation.warnings.map((item) => <p className="tiny" key={item}>Warning: {item}</p>)}
+                    <p className="tiny hash-value">Candidate hash: {validation.configuration_hash}</p>
+                  </div>
+                )}
+
+                {allowWrite && selected.status === "draft" && (
+                  <form key={selected.id} className="compact-form protocol-edit-form" onSubmit={updateDraft}>
+                    <strong>Edit draft configuration</strong>
+                    <label>Objective<textarea name="objective" rows={2} defaultValue={selected.objective} /></label>
+                    <label>Experience-band levels<input name="experience_levels" defaultValue={experienceLevels} required /></label>
+                    <label>Experimental task blocks<input name="task_blocks" defaultValue={taskBlocks} required /></label>
+                    <label>Permitted block sizes<input name="block_sizes" defaultValue={selected.permitted_block_sizes.join(", ")} required /></label>
+                    <label>Approved document reference<input name="protocol_document_ref" defaultValue={selected.protocol_document_ref} required /></label>
+                    <label>Change summary<input name="change_summary" defaultValue={selected.change_summary} /></label>
+                    <button type="submit" className="secondary" disabled={busy}>Save draft</button>
+                  </form>
+                )}
+
+                <div className="protocol-actions">
+                  {allowWrite && selected.status === "draft" && (
+                    <button
+                      type="button"
+                      className="primary"
+                      disabled={busy || !validation?.approval_ready}
+                      onClick={approveSelected}
+                    >
+                      Approve and lock version
+                    </button>
+                  )}
+                  <button type="button" className="secondary" disabled>
+                    Activation available in Step 1D.2
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+    </>
+  );
+}
+
 function ProjectPage({
   projects,
   selectedProject,
@@ -2080,6 +2479,17 @@ export default function App() {
           />
         )}
 
+        {page === "study" && canReadProjects(user) && (
+          <StudyProtocolPage
+            selectedProject={selectedProject}
+            allowWrite={canManageProtocol(user)}
+          />
+        )}
+
+        {page === "study" && !canReadProjects(user) && (
+          <ComingSoon title={title} />
+        )}
+
         {page === "project" && canReadProjects(user) && (
           <ProjectPage
             projects={projects}
@@ -2098,7 +2508,7 @@ export default function App() {
           <AdminPage sites={sites} audit={audit} reload={loadAll} />
         )}
 
-        {["study", "models", "analysis"].includes(page) && (
+        {["models", "analysis"].includes(page) && (
           <ComingSoon title={title} />
         )}
       </main>

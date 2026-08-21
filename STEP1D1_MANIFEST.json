@@ -1,0 +1,29 @@
+{
+  "step": "1D.1",
+  "version": "0.7.0-step1d1",
+  "title": "Protocol & Stratification Foundation",
+  "migration_head": "20260821_0005",
+  "features": [
+    "project-scoped protocol version registry",
+    "draft-only protocol editing",
+    "study-specific target and condition validation",
+    "configurable stratification factors and levels",
+    "configurable experimental task blocks",
+    "permitted block-size validation",
+    "canonical SHA-256 configuration hash",
+    "idempotent approval and approved-version immutability",
+    "protocol RBAC and audit events",
+    "protocol management UI",
+    "explicit Step 1D.2 activation gate"
+  ],
+  "preserved_boundary": {
+    "allocation_algorithm": "balanced_random_v1",
+    "protocol_finalized": false,
+    "final_engine_connected": false
+  },
+  "verification": {
+    "backend_test": "backend/tests/test_step1d1.py",
+    "deployment_script": "scripts/verify_step1d1.ps1",
+    "acceptance_guide": "STEP1D1_ACCEPTANCE.md"
+  }
+}

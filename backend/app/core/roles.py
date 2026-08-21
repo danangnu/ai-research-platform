@@ -68,3 +68,13 @@ PARTICIPANT_ACCOUNT_ROLES = {
     PROJECT_ADMIN,
     RESEARCH_LEAD,
 }
+
+
+# Protocol contents can be read by approved research staff. Draft mutation and
+# approval remain with the two study-authority roles. Participant accounts are
+# intentionally excluded from both sets.
+PROTOCOL_READ_ROLES = PROJECT_READ_ROLES
+PROTOCOL_WRITE_ROLES = {
+    PROJECT_ADMIN,
+    RESEARCH_LEAD,
+}

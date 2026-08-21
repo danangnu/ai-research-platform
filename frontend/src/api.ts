@@ -433,3 +433,103 @@ export const participantApi = {
   auditTrail: (participantId: string) =>
     request<ParticipantAuditTrail>(`/api/participants/${participantId}/audit-trail`),
 };
+
+export type ProtocolCondition = {
+  code: string;
+  label: string;
+  target_n: number;
+};
+
+export type ProtocolStratumLevel = {
+  code: string;
+  label: string;
+};
+
+export type ProtocolStratificationFactor = {
+  key: string;
+  label: string;
+  source_field: string;
+  required: boolean;
+  levels: ProtocolStratumLevel[];
+};
+
+export type ProtocolTaskBlock = {
+  code: string;
+  label: string;
+};
+
+export type StudyProtocol = {
+  id: string;
+  project_id: string;
+  version: string;
+  title: string;
+  status: "draft" | "approved" | "active";
+  objective: string;
+  randomization_unit: string;
+  allocation_method: string;
+  target_total: number;
+  conditions: ProtocolCondition[];
+  stratification_factors: ProtocolStratificationFactor[];
+  task_blocks: ProtocolTaskBlock[];
+  permitted_block_sizes: number[];
+  protocol_document_ref: string;
+  change_summary: string;
+  supersedes_protocol_id: string | null;
+  configuration_hash: string | null;
+  created_by_id: string | null;
+  approved_by_id: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProtocolValidation = {
+  protocol_id: string;
+  valid: boolean;
+  approval_ready: boolean;
+  activation_ready: boolean;
+  errors: string[];
+  warnings: string[];
+  configuration_hash: string;
+  activation_blocker: string;
+};
+
+export type ProtocolSummary = {
+  total_versions: number;
+  drafts: number;
+  approved: number;
+  active: number;
+  latest_protocol_id: string | null;
+  allocation_engine_connected: boolean;
+};
+
+export const protocolApi = {
+  protocols: (projectId?: string) =>
+    request<StudyProtocol[]>(
+      `/api/study/protocols${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`,
+    ),
+  summary: (projectId?: string) =>
+    request<ProtocolSummary>(
+      `/api/study/protocols/summary${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`,
+    ),
+  create: (body: Record<string, unknown>) =>
+    request<StudyProtocol>("/api/study/protocols", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (protocolId: string, body: Record<string, unknown>) =>
+    request<StudyProtocol>(`/api/study/protocols/${protocolId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  validation: (protocolId: string) =>
+    request<ProtocolValidation>(`/api/study/protocols/${protocolId}/validation`),
+  approve: (protocolId: string) =>
+    request<StudyProtocol>(`/api/study/protocols/${protocolId}/approve`, {
+      method: "POST",
+    }),
+  activate: (protocolId: string) =>
+    request<StudyProtocol>(`/api/study/protocols/${protocolId}/activate`, {
+      method: "POST",
+    }),
+};

@@ -334,3 +334,111 @@ class ParticipantAuditTrailOut(BaseModel):
     participant_code: str
     application_id: str
     events: list[ParticipantAuditEventOut]
+
+
+class ProtocolCondition(BaseModel):
+    code: str = Field(min_length=2, max_length=32)
+    label: str = Field(min_length=2, max_length=120)
+    target_n: int = Field(ge=1, le=100000)
+
+
+class ProtocolStratumLevel(BaseModel):
+    code: str = Field(min_length=1, max_length=64)
+    label: str = Field(min_length=1, max_length=120)
+
+
+class ProtocolStratificationFactor(BaseModel):
+    key: str = Field(min_length=2, max_length=64)
+    label: str = Field(min_length=2, max_length=120)
+    source_field: str = Field(min_length=2, max_length=120)
+    required: bool = True
+    levels: list[ProtocolStratumLevel] = Field(default_factory=list, max_length=24)
+
+
+class ProtocolTaskBlock(BaseModel):
+    code: str = Field(min_length=1, max_length=64)
+    label: str = Field(min_length=2, max_length=160)
+
+
+class StudyProtocolCreate(BaseModel):
+    project_id: str
+    version: str = Field(min_length=1, max_length=64)
+    title: str = Field(min_length=3, max_length=255)
+    objective: str = Field(default="", max_length=5000)
+    randomization_unit: str = Field(default="participant", min_length=2, max_length=64)
+    allocation_method: str = Field(
+        default="stratified_permuted_block", min_length=2, max_length=64
+    )
+    target_total: int = Field(default=600, ge=1, le=100000)
+    conditions: list[ProtocolCondition] = Field(default_factory=list, max_length=20)
+    stratification_factors: list[ProtocolStratificationFactor] = Field(
+        default_factory=list, max_length=10
+    )
+    task_blocks: list[ProtocolTaskBlock] = Field(default_factory=list, max_length=24)
+    permitted_block_sizes: list[int] = Field(default_factory=list, max_length=20)
+    protocol_document_ref: str = Field(default="", max_length=2000)
+    change_summary: str = Field(default="", max_length=5000)
+    supersedes_protocol_id: str | None = None
+
+
+class StudyProtocolUpdate(BaseModel):
+    version: str | None = Field(default=None, min_length=1, max_length=64)
+    title: str | None = Field(default=None, min_length=3, max_length=255)
+    objective: str | None = Field(default=None, max_length=5000)
+    randomization_unit: str | None = Field(default=None, min_length=2, max_length=64)
+    allocation_method: str | None = Field(default=None, min_length=2, max_length=64)
+    target_total: int | None = Field(default=None, ge=1, le=100000)
+    conditions: list[ProtocolCondition] | None = Field(default=None, max_length=20)
+    stratification_factors: list[ProtocolStratificationFactor] | None = Field(
+        default=None, max_length=10
+    )
+    task_blocks: list[ProtocolTaskBlock] | None = Field(default=None, max_length=24)
+    permitted_block_sizes: list[int] | None = Field(default=None, max_length=20)
+    protocol_document_ref: str | None = Field(default=None, max_length=2000)
+    change_summary: str | None = Field(default=None, max_length=5000)
+    supersedes_protocol_id: str | None = None
+
+
+class StudyProtocolOut(ORMModel):
+    id: str
+    project_id: str
+    version: str
+    title: str
+    status: str
+    objective: str
+    randomization_unit: str
+    allocation_method: str
+    target_total: int
+    conditions: list[dict[str, Any]]
+    stratification_factors: list[dict[str, Any]]
+    task_blocks: list[dict[str, Any]]
+    permitted_block_sizes: list[int]
+    protocol_document_ref: str
+    change_summary: str
+    supersedes_protocol_id: str | None
+    configuration_hash: str | None
+    created_by_id: str | None
+    approved_by_id: str | None
+    approved_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProtocolValidationOut(BaseModel):
+    protocol_id: str
+    valid: bool
+    approval_ready: bool
+    activation_ready: bool = False
+    errors: list[str]
+    warnings: list[str]
+    configuration_hash: str
+    activation_blocker: str
+
+
+class ProtocolSummaryOut(BaseModel):
+    total_versions: int
+    drafts: int
+    approved: int
+    active: int
+    latest_protocol_id: str | None
+    allocation_engine_connected: bool = False

@@ -924,6 +924,160 @@ nav small {
   }
 }
 
+/* Step 1D.1 protocol and stratification foundation */
+.protocol-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.protocol-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 16px;
+}
+
+.protocol-detail-panel {
+  position: sticky;
+  top: 20px;
+  min-width: 0;
+}
+
+.two-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.panel-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.protocol-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #0f172a;
+  background: #fff;
+  text-align: left;
+}
+
+.protocol-row:hover,
+.protocol-row.selected {
+  border-color: #818cf8;
+  background: #f5f7ff;
+}
+
+.protocol-row strong,
+.protocol-row div span {
+  display: block;
+}
+
+.protocol-row div span {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.protocol-draft {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.protocol-approved {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.protocol-active {
+  color: #3730a3;
+  background: #e0e7ff;
+}
+
+.protocol-section,
+.protocol-edit-form,
+.protocol-actions {
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.protocol-config-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.protocol-factor {
+  margin-top: 10px;
+}
+
+.validation-card {
+  display: grid;
+  gap: 5px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.validation-card.ready {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.validation-card.blocked {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.validation-card p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.hash-value {
+  overflow-wrap: anywhere;
+}
+
+.protocol-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1180px) {
+  .protocol-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .protocol-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .protocol-detail-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .protocol-metrics,
+  .two-field-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Step 1C.2 allocation controls */
 .compact-action {
   width: auto;

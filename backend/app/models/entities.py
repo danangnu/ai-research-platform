@@ -255,6 +255,57 @@ class ParticipantAllocation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class StudyProtocol(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "study_protocols"
+    __table_args__ = (
+        UniqueConstraint("project_id", "version", name="uq_study_protocol_project_version"),
+    )
+
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    version: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), default="draft", nullable=False, index=True
+    )
+    objective: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    randomization_unit: Mapped[str] = mapped_column(
+        String(64), default="participant", nullable=False
+    )
+    allocation_method: Mapped[str] = mapped_column(
+        String(64), default="stratified_permuted_block", nullable=False
+    )
+    target_total: Mapped[int] = mapped_column(Integer, default=600, nullable=False)
+    conditions: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    stratification_factors: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    task_blocks: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    permitted_block_sizes: Mapped[list[int]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    protocol_document_ref: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    change_summary: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    supersedes_protocol_id: Mapped[str | None] = mapped_column(
+        ForeignKey("study_protocols.id", ondelete="SET NULL"), nullable=True
+    )
+    configuration_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_by_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    approved_by_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
 class AuditEvent(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "audit_events"
 

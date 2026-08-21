@@ -1,4 +1,4 @@
-# AI Research Study Management Platform — Step 1C.5 (0.6.0)
+# AI Research Study Management Platform — Step 1D.1 (0.7.0)
 
 Step 1A establishes the core platform used to manage the HumorBot/STARCASM research project.
 
@@ -259,3 +259,20 @@ Production invitation delivery, password reset, multi-factor authentication and 
 Deployment verification is documented in `STEP1C5_ACCEPTANCE.md` and automated by `scripts/verify_step1c5.ps1`.
 
 Step 1C engineering acceptance does not approve `balanced_random_v1` for live research. Final protocol-defined stratification and governance approval are still required.
+
+
+## Step 1D.1 v0.7.0 — Protocol & Stratification Foundation
+
+- Adds a project-scoped, versioned study-protocol registry.
+- Stores the fixed 600-participant target and 200-person HumorBot, STARCASM and Control condition definitions.
+- Stores configurable stratification factors, factor levels, experimental task blocks and permitted allocation block sizes without yet performing final allocation.
+- Validates the participant randomization unit, `stratified_permuted_block` method, target reconciliation, unique factors/levels, three-condition block compatibility and controlled protocol-document reference.
+- Allows only `PROJECT_ADMIN` and `RESEARCH_LEAD` to create, edit and approve protocol drafts; approved research staff retain read access.
+- Stores a canonical SHA-256 configuration hash on approval and makes the approved version immutable.
+- Makes approval idempotent and records `protocol.created`, `protocol.updated` and `protocol.approved` audit events.
+- Keeps protocol management unavailable to participant accounts.
+- Adds a Study UI for draft creation/editing, validation results, version history, condition/strata inspection and approval.
+- Deliberately blocks activation until Step 1D.2 connects the approved hash and participant strata to the final allocation engine.
+- Preserves the accepted provisional `balanced_random_v1` behavior and `protocol_finalized = false` boundary.
+
+Deployment verification is documented in `STEP1D1_ACCEPTANCE.md` and automated by `scripts/verify_step1d1.ps1`.

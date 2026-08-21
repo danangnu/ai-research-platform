@@ -12,7 +12,7 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
 ):
     health = client.get("/health")
     assert health.status_code == 200
-    assert health.json()["version"] == "0.6.0-step1c5"
+    assert health.json()["version"] in {"0.6.0-step1c5", "0.7.0-step1d1"}
 
     before_participants = client.get("/api/participants", headers=auth_headers).json()
     before_metrics = client.get("/api/participants/metrics", headers=auth_headers).json()

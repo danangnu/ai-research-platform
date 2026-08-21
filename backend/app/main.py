@@ -11,6 +11,7 @@ from app.api.participants import router as participants_router
 from app.api.participants import self_router as participant_self_router
 from app.api.recruitment import public_router as public_recruitment_router
 from app.api.recruitment import staff_router as recruitment_router
+from app.api.study_protocols import router as study_protocols_router
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.services.seed import seed_roles_and_admin
@@ -44,6 +45,7 @@ app.include_router(public_recruitment_router)
 app.include_router(recruitment_router)
 app.include_router(participants_router)
 app.include_router(participant_self_router)
+app.include_router(study_protocols_router)
 app.include_router(admin_router)
 
 

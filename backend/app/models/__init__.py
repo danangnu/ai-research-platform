@@ -14,6 +14,7 @@ from app.models.entities import (
     Participant,
     AllocationState,
     ParticipantAllocation,
+    StudyProtocol,
     user_roles,
 )
 
@@ -33,5 +34,6 @@ __all__ = [
     "Participant",
     "AllocationState",
     "ParticipantAllocation",
+    "StudyProtocol",
     "user_roles",
 ]
