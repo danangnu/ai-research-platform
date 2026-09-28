@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import secrets
 from datetime import datetime
 
@@ -15,6 +16,9 @@ from app.db.base import utcnow
 from app.db.session import get_db
 from app.models import Participant, ParticipantCounter, RecruitmentApplication, SelectionDecision, StudySite, User
 from app.schemas.common import (
+    RecruitmentAccessIn,
+    RecruitmentReceiptOut,
+    RecruitmentStatusOut,
     RecruitmentApplicationCreate,
     RecruitmentApplicationOut,
     RecruitmentApplicationReview,
@@ -62,7 +66,7 @@ def public_recruitment_info(db: Session = Depends(get_db)):
     )
     return RecruitmentPublicInfoOut(
         study_name="HumorBot and STARCASM Research Study",
-        recruitment_open=settings.recruitment_open,
+        recruitment_open=settings.recruitment_open and settings.demo_mode,
         target_total=600,
         target_groups={"HumorBot": 200, "STARCASM": 200, "Control": 200},
         consent_version=settings.screening_consent_version,
@@ -72,16 +76,18 @@ def public_recruitment_info(db: Session = Depends(get_db)):
     )
 
 
-@public_router.post("/applications", response_model=RecruitmentApplicationOut, status_code=201)
+@public_router.post("/applications", response_model=RecruitmentReceiptOut, status_code=201)
 def submit_application(
     payload: RecruitmentApplicationCreate,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
 ):
-    if not settings.recruitment_open:
+    response.headers["Cache-Control"] = "no-store"
+    if not settings.recruitment_open or not settings.demo_mode:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Recruitment intake is currently closed.",
+            detail="Recruitment intake is closed. This release supports synthetic demo intake only.",
         )
 
     if not payload.consent_to_screen or not payload.privacy_acknowledged:
@@ -94,6 +100,9 @@ def submit_application(
         site = db.get(StudySite, payload.site_id)
         if site is None or site.status != "active":
             raise HTTPException(status_code=400, detail="Selected study site is not available.")
+
+    if len(payload.preferred_name.strip()) < 2:
+        raise HTTPException(status_code=422, detail="Enter an alias with at least two characters.")
 
     normalized_email = payload.contact_email.lower().strip()
     existing = db.scalar(
@@ -108,7 +117,9 @@ def submit_application(
             detail="An active application already exists for this email address.",
         )
 
+    access_token = secrets.token_urlsafe(32)
     application = RecruitmentApplication(
+        access_token_hash=hashlib.sha256(access_token.encode()).hexdigest(),
         reference_code=_new_reference(),
         site_id=payload.site_id,
         preferred_name=payload.preferred_name.strip(),
@@ -145,7 +156,7 @@ def submit_application(
     )
     db.commit()
     db.refresh(application)
-    return _serialize(application)
+    return RecruitmentReceiptOut(**_serialize(application).model_dump(), access_token=access_token)
 
 
 @staff_router.get("/applications", response_model=list[RecruitmentApplicationOut])
@@ -187,6 +198,7 @@ def recruitment_metrics(
         ),
         eligible=counts.get("eligible", 0),
         ineligible=counts.get("ineligible", 0),
+        withdrawn=counts.get("withdrawn", 0),
     )
 
 
@@ -213,7 +225,7 @@ def review_application(
     if payload.status not in ALLOWED_REVIEW_STATUSES - {"submitted"}:
         raise HTTPException(status_code=422, detail="Invalid eligibility-review status.")
 
-    application = db.get(RecruitmentApplication, application_id)
+    application = db.scalar(select(RecruitmentApplication).where(RecruitmentApplication.id == application_id).with_for_update())
     if application is None:
         raise HTTPException(status_code=404, detail="Recruitment application not found.")
 
@@ -225,6 +237,9 @@ def review_application(
             status_code=409,
             detail="Eligibility is locked after participant enrollment.",
         )
+
+    if application.status == "withdrawn":
+        raise HTTPException(status_code=409, detail="A withdrawn application cannot be reopened. Submit a new application.")
 
     previous_status = application.status
     application.status = payload.status
@@ -444,3 +459,72 @@ def enroll_selected_application(
     db.refresh(participant)
     response.status_code = status.HTTP_201_CREATED
     return participant
+
+
+
+def _application_access(payload: RecruitmentAccessIn, db: Session, *, lock: bool = False):
+    statement = select(RecruitmentApplication).where(
+        RecruitmentApplication.reference_code == payload.reference_code.strip().upper()
+    )
+    if lock:
+        statement = statement.with_for_update()
+    application = db.scalar(statement)
+    expected = application.access_token_hash if application else None
+    provided = hashlib.sha256(payload.access_token.encode()).hexdigest()
+    if not secrets.compare_digest(provided, expected or "0" * 64):
+        # Same response for missing references, wrong tokens and legacy records.
+        raise HTTPException(status_code=404, detail="Reference or access key not recognised.")
+    return application
+
+
+def _public_status(application: RecruitmentApplication, db: Session):
+    participant = db.scalar(select(Participant).where(Participant.application_id == application.id))
+    selection = db.scalar(select(SelectionDecision).where(SelectionDecision.application_id == application.id))
+    stage = application.status
+    if application.status != "withdrawn":
+        if participant:
+            stage = "account_linked" if participant.user_id else "enrolled"
+        elif selection and application.status == "eligible":
+            stage = selection.status
+    messages = {
+        "submitted": "Application received. A staff review is the next step; no email has been sent by this demo.",
+        "under_review": "Staff are reviewing the screening answers.",
+        "needs_review": "Further staff review is needed. Check with the demo coordinator.",
+        "eligible": "Screening review is complete. Selection has not yet been recorded.",
+        "ineligible": "The screening decision is ineligible. The demo coordinator can explain the decision.",
+        "selected": "Selected for demo enrollment. Staff will create a participant record separately.",
+        "waitlisted": "On the demo waiting list. Enrollment is not guaranteed.",
+        "not_selected": "Not selected for demo enrollment. Contact the demo coordinator with questions.",
+        "enrolled": "A participant record has been created. Staff still need to arrange login access.",
+        "account_linked": "Login access has been linked. Use the credentials supplied separately by the demo coordinator.",
+        "withdrawn": "This application has been withdrawn. The workflow record is retained; withdrawal is not deletion.",
+    }
+    return RecruitmentStatusOut(
+        reference_code=application.reference_code, status=application.status, stage=stage,
+        submitted_at=application.submitted_at, updated_at=application.updated_at,
+        next_step=messages.get(stage, "Contact the demo coordinator for the next step."),
+        can_withdraw=participant is None and application.status != "withdrawn",
+    )
+
+
+@public_router.post("/status", response_model=RecruitmentStatusOut)
+def application_status(payload: RecruitmentAccessIn, response: Response, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    return _public_status(_application_access(payload, db), db)
+
+
+@public_router.post("/withdraw", response_model=RecruitmentStatusOut)
+def withdraw_application(payload: RecruitmentAccessIn, response: Response, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    application = _application_access(payload, db, lock=True)
+    if db.scalar(select(Participant.id).where(Participant.application_id == application.id)):
+        raise HTTPException(status_code=409, detail="Already enrolled. Contact the study coordinator for the participant withdrawal process.")
+    if application.status != "withdrawn":
+        previous = application.status
+        application.status = "withdrawn"
+        write_audit(db, actor=None, action="recruitment.application_withdrawn",
+                    entity_type="recruitment_application", entity_id=application.id,
+                    details={"reference_code": application.reference_code, "previous_status": previous})
+        db.commit()
+        db.refresh(application)
+    return _public_status(application, db)

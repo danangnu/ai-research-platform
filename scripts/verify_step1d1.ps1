@@ -36,7 +36,7 @@ function Login-Headers([string] $Email, [string] $Password) {
 
 try {
     $health = Invoke-RestMethod -Uri "$ApiUrl/health"
-    if ($health.version -ne "0.7.0-step1d1") { Fail "Unexpected API version: $($health.version)" }
+    if ($health.version -notin @("0.7.0-step1d1", "0.7.1-recruitment-demo")) { Fail "Unexpected API version: $($health.version)" }
     Pass "Step 1D.1 API version"
 
     $headers = Login-Headers $AdminEmail $AdminPassword
@@ -271,3 +271,4 @@ catch {
     Write-Host $_ -ForegroundColor Red
     exit 1
 }
+

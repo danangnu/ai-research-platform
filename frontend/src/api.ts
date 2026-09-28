@@ -82,6 +82,18 @@ export function setToken(token: string | null) {
   }
 }
 
+function formatDetail(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return detail.map(item => {
+    if (item && typeof item === "object" && "msg" in item) {
+      const field = Array.isArray(item.loc) ? item.loc.filter((x: unknown) => x !== "body").join(" ") : "";
+      return `${field ? field.replaceAll("_", " ") + ": " : ""}${item.msg}`;
+    }
+    return "Please check the entered values.";
+  }).join("; ");
+  return "The request could not be completed.";
+}
+
 async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -110,7 +122,7 @@ async function request<T>(
       typeof data === "object" &&
       data !== null &&
       "detail" in data
-        ? String((data as { detail: unknown }).detail)
+        ? formatDetail((data as { detail: unknown }).detail)
         : `Request failed (${response.status})`;
 
     throw new Error(detail);
@@ -255,6 +267,12 @@ export type RecruitmentApplication = {
   updated_at: string;
 };
 
+export type RecruitmentReceipt = RecruitmentApplication & { access_token: string };
+export type RecruitmentStatus = {
+  reference_code: string; status: string; stage: string; submitted_at: string;
+  updated_at: string; next_step: string; can_withdraw: boolean;
+};
+
 export type RecruitmentMetrics = {
   applications: number;
   submitted: number;
@@ -262,6 +280,7 @@ export type RecruitmentMetrics = {
   needs_review: number;
   eligible: number;
   ineligible: number;
+  withdrawn: number;
 };
 
 export const recruitmentApi = {
@@ -269,10 +288,15 @@ export const recruitmentApi = {
     request<RecruitmentPublicInfo>("/api/public/recruitment/info"),
 
   submitApplication: (body: Record<string, unknown>) =>
-    request<RecruitmentApplication>("/api/public/recruitment/applications", {
+    request<RecruitmentReceipt>("/api/public/recruitment/applications", {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  status: (body: { reference_code: string; access_token: string }) =>
+    request<RecruitmentStatus>("/api/public/recruitment/status", { method: "POST", body: JSON.stringify(body) }),
+  withdraw: (body: { reference_code: string; access_token: string }) =>
+    request<RecruitmentStatus>("/api/public/recruitment/withdraw", { method: "POST", body: JSON.stringify(body) }),
 
   applications: () =>
     request<RecruitmentApplication[]>("/api/recruitment/applications"),
@@ -533,3 +557,4 @@ export const protocolApi = {
       method: "POST",
     }),
 };
+

@@ -1,6 +1,8 @@
+import RecruitmentSite from "./RecruitmentSite";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   api,
+  getToken,
   AllocationSummary,
   AuditEvent,
   login,
@@ -178,7 +180,7 @@ function LoginScreen({
         <p className="eyebrow">Research Operations</p>
         <h1>AI Research Study Management Platform</h1>
         <p className="muted">
-          Step 1D.1 · Protocol & stratification foundation
+          Recruitment demo · Staff and participant access
         </p>
 
         <form onSubmit={submit} className="stack">
@@ -211,7 +213,7 @@ function LoginScreen({
 
         <div className="login-divider"><span>or</span></div>
         <button className="apply-button" type="button" onClick={onApply}>
-          Open recruitment application
+          Back to recruitment website
         </button>
 
         <p className="tiny">
@@ -446,150 +448,6 @@ function GroupBar({
   );
 }
 
-function PublicRecruitment({ onBack }: { onBack: () => void }) {
-  const [info, setInfo] = useState<RecruitmentPublicInfo | null>(null);
-  const [message, setMessage] = useState("");
-  const [reference, setReference] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    recruitmentApi.publicInfo()
-      .then(setInfo)
-      .catch((err) => setMessage(err instanceof Error ? err.message : "Unable to load recruitment information."));
-  }, []);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    setBusy(true);
-    setMessage("");
-
-    try {
-      const application = await recruitmentApi.submitApplication({
-        preferred_name: data.get("preferred_name"),
-        contact_email: data.get("contact_email"),
-        site_id: data.get("site_id") || null,
-        recruitment_source: data.get("recruitment_source") || "",
-        consent_to_screen: data.get("consent_to_screen") === "on",
-        privacy_acknowledged: data.get("privacy_acknowledged") === "on",
-        screening_answers: {
-          demo_online_access: data.get("demo_online_access") === "true",
-          demo_instruction_language: data.get("demo_instruction_language") === "true",
-          demo_schedule_availability: data.get("demo_schedule_availability") === "true",
-        },
-      });
-      form.reset();
-      setReference(application.reference_code);
-      setMessage("Synthetic demo application submitted.");
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Unable to submit application.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="public-recruitment-shell">
-      <DemoBanner />
-      <main className="public-recruitment-content">
-        <button type="button" className="back-link" onClick={onBack}>← Staff sign in</button>
-        <div className="page-heading">
-          <div>
-            <p className="eyebrow">Public recruitment · Step 1B</p>
-            <h1>{info?.study_name || "Research study recruitment"}</h1>
-            <p className="muted">
-              Submit a synthetic screening application and receive an applicant reference.
-              This demo does not enroll or allocate a participant.
-            </p>
-          </div>
-          <span className="status-pill">Recruitment demo</span>
-        </div>
-
-        {!info ? (
-          <section className="panel"><p className="muted">Loading recruitment information…</p></section>
-        ) : !info.recruitment_open ? (
-          <section className="panel"><h2>Recruitment intake is closed</h2></section>
-        ) : (
-          <div className="two-col public-recruitment-grid">
-            <section className="panel">
-              <p className="eyebrow">Study information</p>
-              <h2>Recruitment target</h2>
-              <p className="muted">
-                Target: {info.target_total} participants across HumorBot, STARCASM and Control.
-              </p>
-              <div className="lifecycle compact-lifecycle">
-                <span>Application</span><b>→</b><span>Screening</span><b>→</b>
-                <span>Eligibility review</span><b>→</b><span>Later selection</span>
-              </div>
-              <div className="protocol-warning">
-                <strong>Protocol gate</strong>
-                <p>
-                  Eligibility/exclusion rules and approved participant-facing consent text are not
-                  configured yet. The three screening fields below demonstrate questionnaire plumbing
-                  only and do not automatically determine eligibility.
-                </p>
-              </div>
-            </section>
-
-            <section className="panel">
-              <h2>Screening application</h2>
-              {message && <div className="alert">{message}</div>}
-              {reference && (
-                <div className="reference-card">
-                  <span>Applicant reference</span>
-                  <strong>{reference}</strong>
-                  <small>Keep this synthetic reference for the demo.</small>
-                </div>
-              )}
-              <form className="compact-form" onSubmit={submit}>
-                <input name="preferred_name" placeholder="Preferred name / demo alias" required />
-                <input name="contact_email" type="email" placeholder="Synthetic contact email" required />
-                <select name="site_id" defaultValue="">
-                  <option value="">No study site selected</option>
-                  {info.sites.map((site) => (
-                    <option key={site.id} value={site.id}>{site.code} · {site.name}</option>
-                  ))}
-                </select>
-                <input name="recruitment_source" placeholder="Recruitment source (optional)" />
-
-                <fieldset className="screening-fieldset">
-                  <legend>Demo screening questionnaire — not approved eligibility criteria</legend>
-                  <label>Can you access the online study environment?
-                    <select name="demo_online_access" required defaultValue="">
-                      <option value="" disabled>Select</option><option value="true">Yes</option><option value="false">No</option>
-                    </select>
-                  </label>
-                  <label>Can you follow the study instructions in English?
-                    <select name="demo_instruction_language" required defaultValue="">
-                      <option value="" disabled>Select</option><option value="true">Yes</option><option value="false">No</option>
-                    </select>
-                  </label>
-                  <label>Can you attend scheduled study activities?
-                    <select name="demo_schedule_availability" required defaultValue="">
-                      <option value="" disabled>Select</option><option value="true">Yes</option><option value="false">No</option>
-                    </select>
-                  </label>
-                </fieldset>
-
-                <label className="check-row">
-                  <input type="checkbox" name="consent_to_screen" required />
-                  <span>I acknowledge the demo consent-to-screen statement. It is not approved research consent.</span>
-                </label>
-                <label className="check-row">
-                  <input type="checkbox" name="privacy_acknowledged" required />
-                  <span>I understand this environment must use synthetic data only.</span>
-                </label>
-                <button className="primary" disabled={busy}>{busy ? "Submitting…" : "Submit screening application"}</button>
-              </form>
-            </section>
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
-
 function Recruitment({
   info,
   applications,
@@ -606,8 +464,15 @@ function Recruitment({
   reload: () => Promise<void>;
 }) {
   const [selectedId, setSelectedId] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [busy, setBusy] = useState(false);
+  const filtered = applications.filter(item => {
+    const text = `${item.reference_code} ${item.preferred_name} ${item.contact_email}`.toLowerCase();
+    return text.includes(query.trim().toLowerCase()) && (!statusFilter || item.status === statusFilter);
+  });
   const [message, setMessage] = useState("");
-  const selected = applications.find((item) => item.id === selectedId) || applications[0] || null;
+  const selected = filtered.find((item) => item.id === selectedId) || filtered[0] || null;
   const selection = selected
     ? selections.find((item) => item.application_id === selected.id) || null
     : null;
@@ -624,7 +489,9 @@ function Recruitment({
 
   async function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selected) return;
+    if (!selected || busy) return;
+    setBusy(true);
+    setMessage("");
     const form = event.currentTarget;
     const data = new FormData(form);
     try {
@@ -636,12 +503,14 @@ function Recruitment({
       await reload();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Unable to save eligibility review.");
-    }
+    } finally { setBusy(false); }
   }
 
   async function saveSelection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selected) return;
+    if (!selected || busy) return;
+    setBusy(true);
+    setMessage("");
     const form = event.currentTarget;
     const data = new FormData(form);
     try {
@@ -653,18 +522,20 @@ function Recruitment({
       await reload();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Unable to save participant selection.");
-    }
+    } finally { setBusy(false); }
   }
 
   async function enroll() {
-    if (!selected) return;
+    if (!selected || busy) return;
+    setBusy(true);
+    setMessage("");
     try {
       const participant = await recruitmentApi.enroll(selected.id);
       setMessage(`Participant ${participant.participant_code} enrolled.`);
       await reload();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Unable to enroll participant.");
-    }
+    } finally { setBusy(false); }
   }
 
   const siteName = (siteId: string | null) => {
@@ -679,19 +550,20 @@ function Recruitment({
           <p className="eyebrow">Recruitment operations</p>
           <h1>Applications, Selection & Enrollment</h1>
           <p className="muted">
-            Step 1C.5 verifies the complete accepted participant lifecycle, correlated audit trail, persistence, authorization boundaries and dashboard counts.
+            Review screening answers, record a selection decision, then enroll selected applicants. Use Participants to allocate a condition and link a login.
           </p>
         </div>
-        <span className="status-pill">Step 1C.5</span>
+        <a className="status-pill" href="#home">Open recruitment website ↗</a>
       </div>
 
       {message && <div className="alert">{message}</div>}
 
-      <div className="metric-grid">
+      <div className="metric-grid recruitment-metrics">
         <Metric label="Applications" value={metrics?.applications ?? 0} />
         <Metric label="Submitted" value={metrics?.submitted ?? 0} />
         <Metric label="Needs review" value={metrics?.needs_review ?? 0} />
         <Metric label="Eligible" value={metrics?.eligible ?? 0} />
+        <Metric label="Withdrawn" value={metrics?.withdrawn ?? 0} />
       </div>
 
       <div className="two-col recruitment-review-grid">
@@ -700,13 +572,19 @@ function Recruitment({
             <div><p className="eyebrow">Applicant queue</p><h2>Recruitment applications</h2></div>
             <span className="tag">{applications.length} total</span>
           </div>
+          <div className="recruit-queue-filters">
+            <label>Search applicants<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Reference, alias or email" /></label>
+            <label>Review status<select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="">All statuses</option>{["submitted", "under_review", "needs_review", "eligible", "ineligible", "withdrawn"].map(value => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label>
+          </div>
+          <p className="tiny" role="status">Showing {filtered.length} of {applications.length} applications</p>
           <div className="list recruitment-list">
-            {applications.map((application) => (
+            {filtered.map((application) => (
               <button
                 type="button"
                 className={`application-row ${selected?.id === application.id ? "selected" : ""}`}
                 key={application.id}
-                onClick={() => setSelectedId(application.id)}
+                disabled={busy}
+                onClick={() => { setSelectedId(application.id); setMessage(""); }}
               >
                 <div>
                   <strong>{application.reference_code}</strong>
@@ -715,7 +593,7 @@ function Recruitment({
                 <span className={`tag recruitment-${application.status}`}>{application.status.replaceAll("_", " ")}</span>
               </button>
             ))}
-            {!applications.length && <p className="muted">No recruitment applications yet.</p>}
+            {!filtered.length && <p className="muted">{applications.length ? "No applications match these filters." : "No applications yet. Open the recruitment website to submit a fictional example."}</p>}
           </div>
         </section>
 
@@ -742,7 +620,7 @@ function Recruitment({
                 <strong>No automatic eligibility rule</strong>
                 <p>Final inclusion/exclusion criteria must come from the approved research protocol. This review records workflow status only.</p>
               </div>
-              <form className="compact-form" onSubmit={review} key={`${selected.id}-${selected.updated_at}`}>
+              {selected.status === "withdrawn" ? <div className="alert">This application was withdrawn. Review and enrollment are locked.</div> : enrolledParticipant ? <div className="alert">Eligibility is locked after enrollment.</div> : <form className="compact-form" onSubmit={review} key={`${selected.id}-${selected.updated_at}`}>
                 <select name="status" defaultValue={selected.status === "submitted" ? "under_review" : selected.status}>
                   <option value="under_review">Under review</option>
                   <option value="needs_review">Needs review</option>
@@ -750,8 +628,8 @@ function Recruitment({
                   <option value="ineligible">Ineligible</option>
                 </select>
                 <textarea name="review_note" rows={3} defaultValue={selected.review_note} placeholder="Reviewer note (synthetic demo only)" />
-                <button className="primary">Save eligibility review</button>
-              </form>
+                <button className="primary" disabled={busy}>Save eligibility review</button>
+              </form>}
 
               {selected.status === "eligible" && (
                 <div className="selection-block">
@@ -780,13 +658,13 @@ function Recruitment({
                           defaultValue={selection?.note || ""}
                           placeholder="Selection note (synthetic demo only)"
                         />
-                        <button className="primary">Save selection</button>
+                        <button className="primary" disabled={busy}>Save selection</button>
                       </form>
                       {selection?.status === "selected" && (
                         <div className="enrollment-action">
                           <strong>Selected for enrollment</strong>
                           <p className="tiny">Enrollment creates a pseudonymous participant identity. Study-group allocation is performed separately from the Participants page.</p>
-                          <button type="button" className="primary" onClick={enroll}>Enroll participant</button>
+                          <button type="button" className="primary" disabled={busy} onClick={enroll}>Enroll participant</button>
                         </div>
                       )}
                     </>
@@ -2182,7 +2060,13 @@ function AdminPage({
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [page, setPage] = useState<Page>("overview");
-  const [publicApply, setPublicApply] = useState(() => window.location.hash === "#apply");
+  const [route, setRoute] = useState(() => window.location.hash || (getToken() ? "#workspace" : "#home"));
+  function navigate(next: string) { window.location.hash = next; setRoute(next); }
+  useEffect(() => {
+    const changed = () => setRoute(window.location.hash || "#home");
+    window.addEventListener("hashchange", changed);
+    return () => window.removeEventListener("hashchange", changed);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -2326,6 +2210,7 @@ export default function App() {
   }
 
   useEffect(() => {
+    if (!getToken()) { setLoading(false); return; }
     api
       .me()
       .then((me) => setUser(me))
@@ -2373,31 +2258,15 @@ export default function App() {
     return <div className="center">Loading research platform…</div>;
   }
 
-  if (!user) {
-    if (publicApply) {
-      return (
-        <PublicRecruitment
-          onBack={() => {
-            window.location.hash = "";
-            setPublicApply(false);
-          }}
-        />
-      );
-    }
+  if (["#home", "#apply", "#status"].includes(route) || (!["#signin", "#workspace"].includes(route))) {
+    const publicRoute = route === "#apply" || route === "#status" ? route : "#home";
+    return <RecruitmentSite route={publicRoute} navigate={navigate} onSignIn={() => navigate(user ? "#workspace" : "#signin")} />;
+  }
 
-    return (
-      <LoginScreen
-        onLogin={(nextUser) => {
-          clearRoleScopedState();
-          setPage("overview");
-          setUser(nextUser);
-        }}
-        onApply={() => {
-          window.location.hash = "apply";
-          setPublicApply(true);
-        }}
-      />
-    );
+  if (!user) {
+    return <LoginScreen onLogin={(nextUser) => {
+      clearRoleScopedState(); setPage("overview"); setUser(nextUser); navigate("#workspace");
+    }} onApply={() => navigate("#home")} />;
   }
 
   function logout() {
@@ -2405,6 +2274,7 @@ export default function App() {
     clearRoleScopedState();
     setPage("overview");
     setUser(null);
+    navigate("#signin");
   }
 
   return (
@@ -2516,3 +2386,4 @@ export default function App() {
     </>
   );
 }
+

@@ -30,3 +30,10 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 logs/
+
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Browser acceptance output
+frontend/test-results/
