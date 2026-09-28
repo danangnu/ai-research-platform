@@ -141,6 +141,7 @@ class StudySite(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 class RecruitmentApplication(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "recruitment_applications"
 
+    access_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     reference_code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
     site_id: Mapped[str | None] = mapped_column(ForeignKey("study_sites.id", ondelete="SET NULL"), nullable=True, index=True)
     preferred_name: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -316,3 +317,4 @@ class AuditEvent(UUIDPrimaryKeyMixin, Base):
     details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False, index=True)
+

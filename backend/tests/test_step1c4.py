@@ -47,7 +47,7 @@ def test_step1c4_participant_account_link_and_self_service_rbac(
 ):
     health = client.get("/health")
     assert health.status_code == 200
-    assert health.json()["version"] in {"0.6.0-step1c5", "0.7.0-step1d1"}
+    assert health.json()["version"] in {"0.6.0-step1c5", "0.7.0-step1d1", "0.7.1-recruitment-demo"}
 
     # The seeded demo participant login remains safely unlinked until an
     # authorized study operator explicitly links it.
@@ -203,3 +203,4 @@ def test_step1c4_participant_account_link_and_self_service_rbac(
     assert len(account_events) == 1
     assert account_events[0]["details"]["user_id"] == link["user_id"]
     assert "email" not in account_events[0]["details"]
+

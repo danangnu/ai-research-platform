@@ -1,4 +1,15 @@
-# AI Research Study Management Platform — Step 1D.1 (0.7.0)
+# AI Research Study Management Platform — Recruitment Demo (0.7.1)
+
+This release completes the synthetic recruitment journey on the Step 1D.1 baseline:
+public study pages, a guided application, a downloadable private receipt, status
+lookup, pre-enrollment withdrawal, and staff search/review followed by enrollment,
+allocation, and participant account linking. Existing participant and staff portals
+remain available through **Staff & participant sign in**.
+
+Start with [the recruitment demo guide](RECRUITMENT_DEMO.md) for a complete
+walkthrough, verification commands, and Render deployment settings. This release
+does not open clinical recruitment or deliver participant intervention sessions.
+Only fictional application data should be entered.
 
 Step 1A establishes the core platform used to manage the HumorBot/STARCASM research project.
 

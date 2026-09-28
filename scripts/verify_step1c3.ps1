@@ -26,7 +26,7 @@ function Expect-Forbidden([scriptblock] $Request, [string] $Description) {
 
 try {
     $health = Invoke-RestMethod -Uri "$ApiUrl/health"
-    if ($health.version -notin @("0.4.0-step1c3", "0.5.0-step1c4", "0.6.0-step1c5", "0.7.0-step1d1")) { Fail "Unexpected API version: $($health.version)" }
+    if ($health.version -notin @("0.4.0-step1c3", "0.5.0-step1c4", "0.6.0-step1c5", "0.7.0-step1d1", "0.7.1-recruitment-demo")) { Fail "Unexpected API version: $($health.version)" }
     Pass "Step 1C.3 API version"
 
     $loginBody = @{ email = $AdminEmail; password = $AdminPassword } | ConvertTo-Json
@@ -168,3 +168,4 @@ catch {
     Write-Host $_ -ForegroundColor Red
     exit 1
 }
+

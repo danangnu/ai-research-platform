@@ -211,6 +211,26 @@ class RecruitmentApplicationOut(ORMModel):
     updated_at: datetime
 
 
+class RecruitmentReceiptOut(RecruitmentApplicationOut):
+    # Returned once at submission; never included in staff responses or audit.
+    access_token: str
+
+
+class RecruitmentAccessIn(BaseModel):
+    reference_code: str = Field(min_length=5, max_length=32)
+    access_token: str = Field(min_length=32, max_length=128)
+
+
+class RecruitmentStatusOut(BaseModel):
+    reference_code: str
+    status: str
+    stage: str
+    submitted_at: datetime
+    updated_at: datetime
+    next_step: str
+    can_withdraw: bool
+
+
 class RecruitmentApplicationReview(BaseModel):
     status: str = Field(min_length=2, max_length=32)
     review_note: str = Field(default="", max_length=2000)
@@ -223,6 +243,7 @@ class RecruitmentMetricsOut(BaseModel):
     needs_review: int
     eligible: int
     ineligible: int
+    withdrawn: int = 0
 
 
 class SelectionDecisionCreate(BaseModel):
@@ -442,3 +463,4 @@ class ProtocolSummaryOut(BaseModel):
     active: int
     latest_protocol_id: str | None
     allocation_engine_connected: bool = False
+
