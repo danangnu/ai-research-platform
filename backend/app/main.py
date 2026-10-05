@@ -4,6 +4,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from app.api.study_preparation import router as preparation_router
+from app.api.study_workflow import router as workflow_router
 from app.api.admin import router as admin_router
 from app.api.auth import router as auth_router
 from app.api.projects import router as projects_router
@@ -39,6 +41,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(preparation_router)
+app.include_router(workflow_router)
 app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(public_recruitment_router)

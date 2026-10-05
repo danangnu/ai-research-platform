@@ -22,6 +22,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
       - run: python scripts/test_recruitment_ui.py
+      - run: python scripts/test_study_preparation_ui.py
 
   backend:
     runs-on: ubuntu-latest
