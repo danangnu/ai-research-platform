@@ -94,7 +94,7 @@ function formatDetail(detail: unknown): string {
   return "The request could not be completed.";
 }
 
-async function request<T>(
+export async function request<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {

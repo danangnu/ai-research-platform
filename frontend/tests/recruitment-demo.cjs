@@ -81,12 +81,45 @@ const output=path.resolve(__dirname,'../test-results'); fs.mkdirSync(output,{rec
  await portal.getByLabel('Email',{exact:true}).fill(email);
  await portal.getByLabel('Password',{exact:true}).fill(process.env.DEMO_UI_PASSWORD);
  await portal.getByRole('button',{name:'Sign in',exact:true}).click();
- await portal.getByRole('heading',{name:'My Study Portal'}).waitFor();
- await portal.getByRole('heading',{name:participantCode,exact:true}).waitFor();
+ await portal.getByRole('heading',{name:'My study',exact:true}).waitFor();
+ await portal.getByText(participantCode,{exact:true}).waitFor();
  assert.equal(await portal.getByRole('button',{name:'Recruitment',exact:true}).count(),0);
  assert.equal(await portal.getByRole('button',{name:'Admin',exact:true}).count(),0);
  await portal.reload();
- await portal.getByRole('heading',{name:participantCode,exact:true}).waitFor();
+ await portal.getByText(participantCode,{exact:true}).waitFor();
+
+ // Complete the new synthetic study flow and verify persistence and staff results.
+ await portal.getByRole('heading',{name:'Pre-test',exact:true}).waitFor();
+ await portal.screenshot({path:path.join(output,'study-pre-test.png'),fullPage:true});
+ for(let i=0;i<4;i++) await portal.locator(`input[name="q-${i}"]`).first().check();
+ await portal.locator('input[type=checkbox]').check();
+ await portal.getByRole('button',{name:'Submit pre-test',exact:true}).click();
+ for(let n=1;n<=3;n++) {
+   await portal.getByRole('heading',{name:`Session ${n}`,exact:true}).waitFor();
+   await portal.getByLabel('Time spent (minutes)').fill('5');
+   await portal.getByLabel('Help received').selectOption('none');
+   await portal.getByLabel('How did the session feel?').selectOption(n===2?'tiring':'comfortable');
+   await portal.locator('input[type=checkbox]').check();
+   await portal.getByRole('button',{name:`Submit session ${n}`,exact:true}).click();
+ }
+ await portal.getByRole('heading',{name:'Post-test',exact:true}).waitFor();
+ for(let i=0;i<4;i++) await portal.locator(`input[name="q-${i}"]`).first().check();
+ await portal.locator('input[type=checkbox]').check();
+ await portal.getByRole('button',{name:'Submit post-test',exact:true}).click();
+ await portal.getByRole('heading',{name:'All demo steps are complete',exact:true}).waitFor();
+ await portal.reload();
+ await portal.getByRole('heading',{name:'All demo steps are complete',exact:true}).waitFor();
+ await staff.getByRole('button',{name:'Results',exact:true}).click();
+ await staff.getByRole('heading',{name:'Study results',exact:true}).waitFor();
+ await staff.getByPlaceholder('Participant code',{exact:true}).fill(participantCode);
+ await staff.getByText('Comfort review needed',{exact:true}).waitFor();
+ const studyRow=staff.locator('.wf-table tbody tr');
+ assert.equal(await studyRow.count(),1);
+ assert((await studyRow.textContent()).includes('3 / 3'));
+ await staff.screenshot({path:path.join(output,'study-results.png'),fullPage:true});
+ const csv=staff.waitForEvent('download');
+ await staff.getByRole('button',{name:'Export shown rows (CSV)',exact:true}).click();
+ assert.equal((await csv).suggestedFilename(),'synthetic-study-progress.csv');
 
  await page.getByRole('button',{name:'Check status',exact:true}).click();
  await page.getByRole('heading',{name:'Login access ready',exact:true}).waitFor();

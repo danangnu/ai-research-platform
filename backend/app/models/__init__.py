@@ -37,3 +37,7 @@ __all__ = [
     "StudyProtocol",
     "user_roles",
 ]
+
+from app.models.study_workflow import StudyObservation
+
+from app.models.study_preparation import PreparedConfiguration, PreparedRun, PreparedObservation

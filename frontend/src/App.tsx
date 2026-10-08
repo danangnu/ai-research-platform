@@ -1,3 +1,5 @@
+import { StudyPreparation, PreparedParticipant } from "./StudyPreparation";
+import { StudyDashboard, WorkflowGuide } from "./StudyWorkflow";
 import RecruitmentSite from "./RecruitmentSite";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
@@ -32,6 +34,8 @@ import {
 
 type Page =
   | "overview"
+  | "preparation"
+  | "workflow"
   | "recruitment"
   | "participants"
   | "study"
@@ -42,11 +46,13 @@ type Page =
 
 const NAV: { page: Page; label: string; step1a: boolean }[] = [
   { page: "overview", label: "Overview", step1a: true },
+  { page: "preparation", label: "Study preparation", step1a: true },
+  { page: "workflow", label: "How it works", step1a: true },
   { page: "recruitment", label: "Recruitment", step1a: true },
   { page: "participants", label: "Participants", step1a: true },
   { page: "study", label: "Study", step1a: true },
   { page: "models", label: "Models", step1a: false },
-  { page: "analysis", label: "Analysis", step1a: false },
+  { page: "analysis", label: "Results", step1a: true },
   { page: "project", label: "Project", step1a: true },
   { page: "admin", label: "Admin", step1a: true },
 ];
@@ -121,11 +127,15 @@ function canManageProtocol(user: User) {
 function visibleNavigation(user: User) {
   return NAV.filter((item) => {
     if (item.page === "overview") return true;
+    if (item.page === "preparation") return canRecruit(user);
+    if (item.page === "workflow") return canRecruit(user);
+    if (item.page === "analysis") return canRecruit(user);
+    if (item.page === "models") return false;
     if (item.page === "recruitment") return canRecruit(user);
     if (item.page === "participants") return canRecruit(user);
     if (item.page === "project") return canReadProjects(user);
     if (item.page === "admin") return canAdminister(user);
-    if (item.page === "study") return true;
+    if (item.page === "study") return canReadProjects(user);
     return canReadProjects(user);
   });
 }
@@ -180,7 +190,7 @@ function LoginScreen({
         <p className="eyebrow">Research Operations</p>
         <h1>AI Research Study Management Platform</h1>
         <p className="muted">
-          Recruitment demo · Staff and participant access
+          Study prototype · Staff and participant access
         </p>
 
         <form onSubmit={submit} className="stack">
@@ -2291,16 +2301,16 @@ export default function App() {
         </div>
 
         <nav>
-          {navigation.map((item) => (
-            <button
-              key={item.page}
-              className={page === item.page ? "active" : ""}
-              onClick={() => setPage(item.page)}
-            >
-              <span>{item.label}</span>
-              {!item.step1a && <small>Next</small>}
+          <button onClick={() => { window.location.href = "/digit-span.html"; }}>Digit Span game</button>
+          <button onClick={() => { window.location.href = "/committee-demo.html"; }}>Committee demo</button>
+          {navigation.filter(item => ["overview", "recruitment", "participants", "analysis", "workflow", "preparation"].includes(item.page)).map(item => (
+            <button key={item.page} className={page === item.page ? "active" : ""} onClick={() => setPage(item.page)}>
+              <span>{item.page === "overview" && user.roles.includes("PARTICIPANT") ? "My study" : item.label}</span>
             </button>
           ))}
+          {navigation.some(item => ["study", "project", "admin"].includes(item.page)) && <details><summary>Advanced settings</summary>
+            {navigation.filter(item => ["study", "project", "admin"].includes(item.page)).map(item => <button key={item.page} className={page === item.page ? "active" : ""} onClick={() => setPage(item.page)}>{item.page === "study" ? "Protocol" : item.label}</button>)}
+          </details>}
         </nav>
 
         <div className="sidebar-user">
@@ -2311,18 +2321,10 @@ export default function App() {
       </aside>
 
       <main className="content">
-        {page === "overview" &&
-          (canReadProjects(user) ? (
-            <Overview
-              projects={projects}
-              tasks={tasks}
-              risks={risks}
-              recruitmentMetrics={recruitmentMetrics}
-              allocationSummary={allocationSummary}
-            />
-          ) : (
-            <LimitedOverview user={user} />
-          ))}
+        {page === "overview" && (canRecruit(user) ? <StudyDashboard key={user.id} onRecruitment={() => setPage("recruitment")} onParticipants={() => setPage("participants")} /> : user.roles.includes("PARTICIPANT") ? <PreparedParticipant key={user.id} /> : <LimitedOverview user={user} />)}
+        {page === "analysis" && canRecruit(user) && <StudyDashboard key={`results-${user.id}`} results onRecruitment={() => setPage("recruitment")} onParticipants={() => setPage("participants")} />}
+        {page === "preparation" && canRecruit(user) && <StudyPreparation participants={participants} canEdit={canManageProtocol(user)} />}
+        {page === "workflow" && canRecruit(user) && <WorkflowGuide />}
 
         {page === "recruitment" && canRecruit(user) && (
           <Recruitment
@@ -2378,7 +2380,7 @@ export default function App() {
           <AdminPage sites={sites} audit={audit} reload={loadAll} />
         )}
 
-        {["models", "analysis"].includes(page) && (
+        {["models"].includes(page) && (
           <ComingSoon title={title} />
         )}
       </main>
@@ -2386,4 +2388,3 @@ export default function App() {
     </>
   );
 }
-

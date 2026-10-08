@@ -94,6 +94,8 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
       <nav aria-label="Recruitment navigation">
         <button aria-current={route === "#home" ? "page" : undefined} onClick={() => navigate("#home")}>About the study</button>
         <button aria-current={route === "#status" ? "page" : undefined} onClick={() => navigate("#status")}>Application status</button>
+        <button onClick={() => { window.location.href = "/digit-span.html"; }}>Digit Span game</button>
+        <button onClick={() => { window.location.href = "/committee-demo.html"; }}>Committee demo</button>
         <button className="recruit-outline" onClick={onSignIn}>Staff & participant sign in <span aria-hidden="true">↗</span></button>
       </nav>
     </header>
@@ -101,29 +103,30 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
       {route === "#home" && <>
         <section className="recruit-hero">
           <div>
-            <p className="recruit-kicker">StARCASM + HUMOR Bot</p>
+            <p className="recruit-kicker">StARCASM + DANG</p>
             <h1 tabIndex={-1} ref={heading}>A conversation starts with understanding.</h1>
             <p className="recruit-lead">Explore the recruitment journey for research on sarcasm, humor, and social communication.</p>
-            <p>This website demonstrates how an application moves from screening to staff review and participant enrollment. Use a fictional identity to try the complete process.</p>
+            <p>This website connects screening, staff review, enrollment, pre-test, demo sessions, and post-test. Use a fictional identity to try the complete process.</p>
             <div className="recruit-actions"><button className="recruit-primary" disabled={!open} onClick={() => navigate("#apply")}>Start a demo application <span aria-hidden="true">→</span></button><button className="recruit-text" onClick={() => navigate("#status")}>Already applied?</button></div>
             <p className="recruit-caption">No clinical information required. No research consent is collected.</p>
           </div>
           <aside className="recruit-preview" aria-label="Two research tools">
             <div className="recruit-preview-top"><span>Two ways to explore meaning</span><span aria-hidden="true">✳</span></div>
             <article><span className="recruit-chip">01 / StARCASM</span><h2>Beyond the literal.</h2><p>Sarcasm and contextual meaning: when words and intention may differ.</p><div className="recruit-bubble">“Wonderful, another meeting.”</div><span className="recruit-caption">What could the speaker mean?</span></article>
-            <article><span className="recruit-chip">02 / HUMOR Bot</span><h2>A different reading.</h2><p>Humor, wordplay, and the unexpected connections behind a joke.</p><div className="recruit-bubble">“The baker couldn't make enough dough.”</div><span className="recruit-caption">What makes the wording playful?</span></article>
+            <article><span className="recruit-chip">02 / DANG</span><h2>A different reading.</h2><p>Humor, wordplay, and the unexpected connections behind a joke.</p><div className="recruit-bubble">“The baker couldn't make enough dough.”</div><span className="recruit-caption">What makes the wording playful?</span></article>
             <p className="recruit-preview-foot">Research tools · Clinical benefit has not been established</p>
           </aside>
         </section>
-        <section className="recruit-section" aria-labelledby="journey-title"><p className="recruit-kicker">The recruitment journey</p><h2 id="journey-title">From interest to a participant account.</h2><div className="recruit-journey">
-          {[["01", "Apply", "Enter a demo alias, contact address, and screening answers."], ["02", "Review", "Staff review the application and record a selection decision."], ["03", "Enroll", "Selected applicants receive a separate participant record."], ["04", "Access", "Staff arrange a participant login. Study activities are a later step."]].map(([n,t,d]) => <article key={n}><span>{n}</span><h3>{t}</h3><p>{d}</p></article>)}
+        <section className="recruit-section" aria-labelledby="digit-span-title"><p className="recruit-kicker">Memory game</p><h2 id="digit-span-title">Try Digit Span.</h2><p>Watch a sequence of numbers, then recall them forwards or backwards. Choose your sequence length and speed.</p><p className="recruit-caption">For practice and demonstration. Game scores are kept only for this page session and are not saved as study results.</p><button className="recruit-primary" onClick={() => { window.location.href = "/digit-span.html"; }}>Play Digit Span <span aria-hidden="true">→</span></button></section>
+        <section className="recruit-section" aria-labelledby="journey-title"><p className="recruit-kicker">The study journey</p><h2 id="journey-title">From screening to study review.</h2><div className="recruit-journey">
+          {[["01", "Apply", "Enter a demo alias, contact address, and screening answers."], ["02", "Review", "Staff review the application and record a selection decision."], ["03", "Enroll", "Selected applicants receive a separate participant record."], ["04", "Access", "Staff link a login for the pre-test, three demo sessions, and post-test."]].map(([n,t,d]) => <article key={n}><span>{n}</span><h3>{t}</h3><p>{d}</p></article>)}
         </div></section>
         <section className="recruit-faq recruit-section"><div><p className="recruit-kicker">Before starting</p><h2>A few things to know.</h2><p>The demo shows the workflow. Clinical eligibility, session schedules, and approved study materials still need to be confirmed by the research team.</p></div><div>
           <details><summary>Is this enrollment in a real study?</summary><p>No. This is a demonstration using fictional information. An application alone does not create a participant record or assign a study group.</p></details>
           <details><summary>What information should be entered?</summary><p>A made-up alias and synthetic email address, such as demo@example.com. Do not enter names, diagnoses, health records, or other real personal information.</p></details>
           <details><summary>How can an application be checked?</summary><p>After submission, save the receipt containing a reference and private access key. Both are needed on the Application status page. This demo does not send email.</p></details>
           <details><summary>Can an application be withdrawn?</summary><p>Before enrollment, use the private status page to withdraw. The workflow record is retained. After enrollment, contact the coordinator through the channel supplied by the research team.</p></details>
-          <details><summary>Can the bots be tried separately?</summary><p>The <a href="https://starcasm-research-demo.onrender.com" target="_blank" rel="noreferrer">StARCASM demo</a> and <a href="https://humor-research-demo.onrender.com" target="_blank" rel="noreferrer">HUMOR demo</a> require separate reviewer credentials. These demonstrations are not assigned study sessions.</p></details>
+          <details><summary>Can the bots be tried separately?</summary><p>The <a href="https://starcasm-research-demo-tmlee10.onrender.com" target="_blank" rel="noreferrer">StARCASM demo</a> and <a href="https://humor-research-demo-tmlee10.onrender.com" target="_blank" rel="noreferrer">DANG demo</a> require separate reviewer credentials. These demonstrations are not assigned study sessions.</p></details>
         </div></section>
       </>}
       {loadError && <div className="recruit-error" role="alert"><strong>Recruitment service unavailable</strong><p>{loadError}</p><button onClick={() => setRetry(retry + 1)}>Retry connection</button></div>}
@@ -173,6 +176,6 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
         </> : <><span className="recruit-kicker">Progress, without a staff account</span><h2>Keep the receipt close.</h2><p>Review, selection, and enrollment updates appear here. Private staff notes and other applications are never included.</p></>}</section></div>
       </>}
     </main>
-    <footer className="recruit-footer"><span><b>AI Research</b> · StARCASM & HUMOR Bot</span><span>Demonstration only · No live clinical recruitment</span></footer>
+    <footer className="recruit-footer"><span><b>AI Research</b> · StARCASM & DANG</span><span>Demonstration only · No live clinical recruitment</span></footer>
   </div>;
 }
