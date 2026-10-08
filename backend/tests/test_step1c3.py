@@ -6,6 +6,7 @@ def _enroll_participant(client, auth_headers):
             "contact_email": "step1c3.management@example.com",
             "recruitment_source": "step1c3 acceptance",
             "consent_to_screen": True,
+            "informed_consent_accepted": True, "informed_consent_version": "committee-consent-draft-2026-10-08",
             "privacy_acknowledged": True,
             "screening_answers": {
                 "demo_online_access": True,
@@ -50,7 +51,7 @@ def test_step1c3_participant_management_contract_and_rbac(
 ):
     health = client.get("/health")
     assert health.status_code == 200
-    assert health.json()["version"] in {"0.6.0-step1c5", "0.7.0-step1d1", "0.7.1-recruitment-demo"}
+    assert health.json()["version"] in {"0.6.0-step1c5", "0.7.0-step1d1", "0.9.0-privacy-consent"}
 
     participant = _enroll_participant(client, auth_headers)
     allocation = client.post(

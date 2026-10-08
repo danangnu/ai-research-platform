@@ -13,9 +13,11 @@ def enrolled(client, auth_headers, allocate=True):
     assert client.patch(uri + "/review", headers=auth_headers, json={"status": "eligible"}).status_code == 200
     assert client.post(uri + "/selection", headers=auth_headers, json={"status": "selected"}).status_code == 200
     p = client.post(uri + "/enroll", headers=auth_headers).json()
-    email = f"workflow.{uuid.uuid4().hex}@example.com"
+    with SessionLocal() as db:
+        from app.models import RecruitmentApplication
+        email = db.get(RecruitmentApplication, application["id"]).contact_email
     linked = client.post(f"/api/participants/{p['id']}/account", headers=auth_headers,
-        json={"email": email, "full_name": "Fictional Workflow Participant", "initial_password": "SyntheticDemo123!"})
+        json={"initial_password": "SyntheticDemo123!"})
     assert linked.status_code in (200, 201), linked.text
     if allocate:
         assert client.post(f"/api/participants/{p['id']}/allocate", headers=auth_headers).status_code in (200, 201)

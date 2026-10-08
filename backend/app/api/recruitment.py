@@ -30,6 +30,8 @@ from app.schemas.common import (
     SelectionDecisionOut,
 )
 from app.services.audit import write_audit
+from app.services.consent import VERSION as CONSENT_VERSION, TEXT as CONSENT_TEXT
+from app.models import ConsentRecord
 
 
 public_router = APIRouter(prefix="/api/public/recruitment", tags=["public recruitment"])
@@ -73,6 +75,7 @@ def public_recruitment_info(db: Session = Depends(get_db)):
         protocol_criteria_configured=False,
         demo_mode=settings.demo_mode,
         sites=[RecruitmentSiteOut.model_validate(site) for site in sites],
+        informed_consent={"version": CONSENT_VERSION, "text": CONSENT_TEXT, "status": "draft_not_approved", "synthetic_only": True},
     )
 
 
@@ -89,6 +92,9 @@ def submit_application(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Recruitment intake is closed. This release supports synthetic demo intake only.",
         )
+
+    if not payload.informed_consent_accepted or payload.informed_consent_version != CONSENT_VERSION:
+        raise HTTPException(422, "Accept the current draft consent demonstration before submitting. This is not approved research consent.")
 
     if not payload.consent_to_screen or not payload.privacy_acknowledged:
         raise HTTPException(
@@ -140,6 +146,9 @@ def submit_application(
         db.rollback()
         raise HTTPException(status_code=409, detail="Duplicate recruitment application.") from exc
 
+    db.add(ConsentRecord(application_id=application.id, version=CONSENT_VERSION,
+        text_sha256=hashlib.sha256(CONSENT_TEXT.encode()).hexdigest(), text_snapshot=CONSENT_TEXT, synthetic_only=True))
+
     # Public audit deliberately avoids storing contact details or questionnaire answers.
     write_audit(
         db,
@@ -172,7 +181,9 @@ def list_applications(
         if application_status not in ALLOWED_REVIEW_STATUSES | {"withdrawn"}:
             raise HTTPException(status_code=400, detail="Unknown recruitment status.")
         statement = statement.where(RecruitmentApplication.status == application_status)
-    return list(db.scalars(statement))
+    rows = list(db.scalars(statement))
+    enrolled = set(db.scalars(select(Participant.application_id)))
+    return [RecruitmentApplicationOut.model_validate(a).model_copy(update={"enrolled": a.id in enrolled}) for a in rows]
 
 
 @staff_router.get("/metrics", response_model=RecruitmentMetricsOut)
@@ -211,7 +222,7 @@ def get_application(
     application = db.get(RecruitmentApplication, application_id)
     if application is None:
         raise HTTPException(status_code=404, detail="Recruitment application not found.")
-    return application
+    return RecruitmentApplicationOut.model_validate(application).model_copy(update={"enrolled": bool(db.scalar(select(Participant.id).where(Participant.application_id == application.id)))})
 
 
 @staff_router.patch("/applications/{application_id}/review", response_model=RecruitmentApplicationOut)

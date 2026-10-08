@@ -21,6 +21,7 @@ def test_recruitment_submission_review_and_rbac(client, auth_headers, participan
             "contact_email": "synthetic.applicant@example.com",
             "recruitment_source": "demo acceptance test",
             "consent_to_screen": True,
+            "informed_consent_accepted": True, "informed_consent_version": "committee-consent-draft-2026-10-08",
             "privacy_acknowledged": True,
             "screening_answers": {
                 "demo_online_access": True,
@@ -41,6 +42,7 @@ def test_recruitment_submission_review_and_rbac(client, auth_headers, participan
             "preferred_name": "Duplicate Synthetic Applicant",
             "contact_email": "SYNTHETIC.APPLICANT@example.com",
             "consent_to_screen": True,
+            "informed_consent_accepted": True, "informed_consent_version": "committee-consent-draft-2026-10-08",
             "privacy_acknowledged": True,
             "screening_answers": {},
         },
@@ -105,6 +107,7 @@ def test_under_review_is_counted_in_needs_review_metric(client, auth_headers):
             "preferred_name": "Synthetic Under Review Applicant",
             "contact_email": "under.review@example.com",
             "consent_to_screen": True,
+            "informed_consent_accepted": True, "informed_consent_version": "committee-consent-draft-2026-10-08",
             "privacy_acknowledged": True,
             "screening_answers": {
                 "demo_online_access": True,

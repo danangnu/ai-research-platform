@@ -15,6 +15,8 @@ const output=path.resolve(__dirname,'../test-results'); fs.mkdirSync(output,{rec
  await page.screenshot({path:path.join(output,'home-desktop.png'),fullPage:true});
  await page.getByRole('button',{name:'Start a demo application'}).click();
  await page.getByRole('button',{name:'Fill fictional example'}).click();
+ await page.getByLabel('I have read the draft and agree to continue this fictional demonstration.').check();
+ await page.getByRole('button',{name:'Continue',exact:true}).click();
  const email=await page.locator('[name=contact_email]').inputValue();
  await page.getByRole('button',{name:'Continue',exact:true}).click();
  await page.getByRole('button',{name:'Continue',exact:true}).click();
@@ -59,14 +61,12 @@ const output=path.resolve(__dirname,'../test-results'); fs.mkdirSync(output,{rec
  await staff.getByRole('button',{name:'Enroll participant',exact:true}).click();
  await staff.getByText('Participant enrolled',{exact:true}).waitFor();
  await staff.screenshot({path:path.join(output,'staff-review.png'),fullPage:true});
- const participantCode=await staff.locator('.enrollment-success>span').textContent();
+ const participantCode=(await staff.getByText(/^Participant P-.* enrolled\.$/).innerText()).match(/P-\d+/)[0];
  await staff.getByRole('button',{name:'Participants',exact:true}).click();
  await staff.getByLabel('Search participant code or ID').fill(participantCode);
  await staff.getByRole('button',{name:'View details',exact:true}).click();
  await staff.getByRole('button',{name:'Run server-side allocation',exact:true}).click();
  await staff.locator('.participant-row .tag').filter({hasText:/^(HumorBot|STARCASM|Control)$/}).waitFor();
- await staff.locator('[name=email]').fill(email);
- await staff.locator('[name=full_name]').fill('Fictional Browser Participant');
  await staff.locator('[name=initial_password]').fill(process.env.DEMO_UI_PASSWORD);
  await staff.getByRole('button',{name:'Create or link account',exact:true}).click();
  await staff.getByText('Linked to participant-only login',{exact:true}).waitFor();
@@ -82,11 +82,11 @@ const output=path.resolve(__dirname,'../test-results'); fs.mkdirSync(output,{rec
  await portal.getByLabel('Password',{exact:true}).fill(process.env.DEMO_UI_PASSWORD);
  await portal.getByRole('button',{name:'Sign in',exact:true}).click();
  await portal.getByRole('heading',{name:'My study',exact:true}).waitFor();
- await portal.getByText(participantCode,{exact:true}).waitFor();
+ await portal.getByRole('main').getByText(participantCode,{exact:true}).waitFor();
  assert.equal(await portal.getByRole('button',{name:'Recruitment',exact:true}).count(),0);
  assert.equal(await portal.getByRole('button',{name:'Admin',exact:true}).count(),0);
  await portal.reload();
- await portal.getByText(participantCode,{exact:true}).waitFor();
+ await portal.getByRole('main').getByText(participantCode,{exact:true}).waitFor();
 
  // Complete the new synthetic study flow and verify persistence and staff results.
  await portal.getByRole('heading',{name:'Pre-test',exact:true}).waitFor();
@@ -132,6 +132,8 @@ const output=path.resolve(__dirname,'../test-results'); fs.mkdirSync(output,{rec
  await mobile.screenshot({path:path.join(output,'home-mobile.png'),fullPage:true});
  await mobile.getByRole('button',{name:'Start a demo application'}).click();
  await mobile.getByRole('button',{name:'Fill fictional example'}).click();
+ await mobile.getByLabel('I have read the draft and agree to continue this fictional demonstration.').check();
+ await mobile.getByRole('button',{name:'Continue',exact:true}).click();
  await mobile.screenshot({path:path.join(output,'application-mobile.png'),fullPage:true});
  await mobile.getByRole('button',{name:'Continue',exact:true}).click();
  await mobile.getByRole('button',{name:'Continue',exact:true}).click();

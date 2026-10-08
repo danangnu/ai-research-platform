@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_serializer, computed_field
 
 
 class ORMModel(BaseModel):
@@ -179,6 +179,9 @@ class RecruitmentPublicInfoOut(BaseModel):
     protocol_criteria_configured: bool
     demo_mode: bool
     sites: list[RecruitmentSiteOut]
+    study_duration_days: int = 30
+    clinic_count: int = 3
+    informed_consent: dict[str, Any]
 
 
 class RecruitmentApplicationCreate(BaseModel):
@@ -189,6 +192,8 @@ class RecruitmentApplicationCreate(BaseModel):
     consent_to_screen: bool
     privacy_acknowledged: bool
     screening_answers: dict[str, bool] = Field(default_factory=dict)
+    informed_consent_accepted: bool = False
+    informed_consent_version: str = ""
 
 
 class RecruitmentApplicationOut(ORMModel):
@@ -196,7 +201,7 @@ class RecruitmentApplicationOut(ORMModel):
     reference_code: str
     site_id: str | None
     preferred_name: str
-    contact_email: EmailStr
+    contact_email: str
     recruitment_source: str
     consent_to_screen: bool
     privacy_acknowledged: bool
@@ -209,6 +214,18 @@ class RecruitmentApplicationOut(ORMModel):
     reviewed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+    @field_serializer("screening_answers")
+    def safe_answers(self, value):
+        allowed = {"demo_online_access", "demo_instruction_language", "demo_schedule_availability"}
+        return {k: v for k, v in value.items() if k in allowed and isinstance(v, bool)}
+
+    enrolled: bool = False
+
+    @field_serializer("preferred_name", "contact_email", "recruitment_source", "review_note")
+    def hide_identity(self, value):
+        return "Restricted"
 
 
 class RecruitmentReceiptOut(RecruitmentApplicationOut):
@@ -262,6 +279,11 @@ class SelectionDecisionOut(ORMModel):
     updated_at: datetime
 
 
+    @field_serializer("note")
+    def hide_legacy_note(self, value):
+        return ""
+
+
 class ParticipantOut(ORMModel):
     id: str
     participant_code: str
@@ -275,6 +297,16 @@ class ParticipantOut(ORMModel):
     enrolled_at: datetime
     created_at: datetime
     updated_at: datetime
+
+
+    @field_serializer("application_id", "user_id")
+    def hide_identity_join(self, value):
+        return None
+
+    @computed_field
+    @property
+    def account_linked(self) -> bool:
+        return bool(self.user_id)
 
 
 class ParticipantAllocationOut(ORMModel):
@@ -315,15 +347,13 @@ class ParticipantMetricsOut(BaseModel):
 
 
 class ParticipantAccountLinkIn(BaseModel):
-    email: EmailStr
-    full_name: str = Field(min_length=2, max_length=255)
+    model_config = ConfigDict(extra="forbid")
     initial_password: str | None = Field(default=None, min_length=12, max_length=512)
 
 
 class ParticipantAccountLinkOut(BaseModel):
     participant_id: str
     participant_code: str
-    user_id: str
     account_status: str
     created_account: bool
     linked_at: datetime
@@ -353,7 +383,7 @@ class ParticipantAuditEventOut(ORMModel):
 class ParticipantAuditTrailOut(BaseModel):
     participant_id: str
     participant_code: str
-    application_id: str
+    application_id: None = None
     events: list[ParticipantAuditEventOut]
 
 

@@ -82,11 +82,11 @@ class Form(StrictModel):
 
 
 class Schedule(StrictModel):
-    duration_days: StrictInt = Field(default=90, ge=1, le=365)
+    duration_days: StrictInt = Field(default=30, ge=1, le=365)
     sessions_per_week: StrictInt = Field(default=3, ge=1, le=7)
     suggested_minutes_min: StrictInt = Field(default=5, ge=1, le=180)
     suggested_minutes_max: StrictInt = Field(default=10, ge=1, le=180)
-    interim_day: StrictInt | None = Field(default=45, ge=1, le=364)
+    interim_day: StrictInt | None = Field(default=None, ge=1, le=364)
 
     @model_validator(mode="after")
     def valid(self):

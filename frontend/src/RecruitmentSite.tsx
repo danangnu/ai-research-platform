@@ -23,6 +23,7 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
   const [retry, setRetry] = useState(0);
   const [form, setForm] = useState(empty);
   const [step, setStep] = useState(0);
+  const [informedConsent, setInformedConsent] = useState(false);
   const [consent, setConsent] = useState(false);
   const [privacy, setPrivacy] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -38,7 +39,7 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
   useEffect(() => {
     let current = true;
     setLoadError("");
-    recruitmentApi.publicInfo().then(data => { if (current) setInfo(data); })
+    recruitmentApi.publicInfo().then(data => { if (current) { setInfo(data); const code=new URLSearchParams(window.location.search).get("clinic"); const site=data.sites.find(s=>s.code===code); if(site)setForm(f=>({...f,site_id:site.id})); } })
       .catch(err => { if (current) setLoadError(err.message || "Unable to connect to the recruitment service."); });
     return () => { current = false; };
   }, [retry]);
@@ -52,7 +53,8 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (step < 2) { setStep(step + 1); return; }
+    if (step === 0 && !informedConsent) { setError("Accept the draft demonstration consent to continue."); return; }
+    if (step < 3) { setStep(step + 1); return; }
     if (pending.current) return;
     pending.current = true; setBusy(true); setError("");
     try {
@@ -60,10 +62,11 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
         preferred_name: form.preferred_name.trim(), contact_email: form.contact_email.trim(),
         site_id: form.site_id || null, recruitment_source: form.recruitment_source,
         consent_to_screen: consent, privacy_acknowledged: privacy,
+        informed_consent_accepted: informedConsent, informed_consent_version: info?.informed_consent.version,
         screening_answers: Object.fromEntries(questions.map(([key]) => [key, form[key] === "true"])),
       });
       setReceipt(record); setReference(record.reference_code); setAccessKey(record.access_token);
-      setForm(empty); setConsent(false); setPrivacy(false);
+      setForm(empty); setConsent(false); setPrivacy(false); setInformedConsent(false);
     } catch (err) { setError(err instanceof Error ? err.message : "Submission failed. Please try again."); }
     finally { pending.current = false; setBusy(false); }
   }
@@ -108,7 +111,7 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
             <p className="recruit-lead">Explore the recruitment journey for research on sarcasm, humor, and social communication.</p>
             <p>This website connects screening, staff review, enrollment, pre-test, demo sessions, and post-test. Use a fictional identity to try the complete process.</p>
             <div className="recruit-actions"><button className="recruit-primary" disabled={!open} onClick={() => navigate("#apply")}>Start a demo application <span aria-hidden="true">→</span></button><button className="recruit-text" onClick={() => navigate("#status")}>Already applied?</button></div>
-            <p className="recruit-caption">No clinical information required. No research consent is collected.</p>
+            <p className="recruit-caption">Includes a draft online consent step. No approved research consent is collected.</p>
           </div>
           <aside className="recruit-preview" aria-label="Two research tools">
             <div className="recruit-preview-top"><span>Two ways to explore meaning</span><span aria-hidden="true">✳</span></div>
@@ -140,24 +143,25 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
           <p className="recruit-caption">The key is shown only in this receipt and is not emailed or saved in browser storage. Download it before leaving. Anyone with both the reference and key can check or withdraw this application before enrollment.</p>
           <div className="recruit-actions"><button className="recruit-primary" onClick={downloadReceipt}>Download receipt</button><button className="recruit-outline" onClick={() => { navigate("#status"); void checkStatus(); }}>Check application status</button></div>
         </section> : open && <div className="recruit-application-grid">
-          <aside><ol className="recruit-steps">{["Contact details", "Screening questions", "Review & submit"].map((title, i) => <li key={title} aria-current={step === i ? "step" : undefined}><span>{i < step ? "✓" : i + 1}</span><div><b>{title}</b><small>{i === step ? "Current step" : i < step ? "Complete" : "Up next"}</small></div></li>)}</ol><div className="recruit-callout"><b>For demonstration only</b><p>Use the example details to explore the form. Final clinical criteria and approved consent are not configured.</p><button className="recruit-text" type="button" disabled={busy} onClick={example}>Fill fictional example</button></div></aside>
+          <aside><ol className="recruit-steps">{["Online consent", "Contact details", "Screening questions", "Review & submit"].map((title, i) => <li key={title} aria-current={step === i ? "step" : undefined}><span>{i < step ? "✓" : i + 1}</span><div><b>{title}</b><small>{i === step ? "Current step" : i < step ? "Complete" : "Up next"}</small></div></li>)}</ol><div className="recruit-callout"><b>For demonstration only</b><p>Use the example details to explore the form. Final clinical criteria and approved consent are not configured.</p><button className="recruit-text" type="button" disabled={busy} onClick={example}>Fill fictional example</button></div></aside>
           <form className="recruit-card recruit-form" onSubmit={submit}>
-            <p className="recruit-kicker">Step {step + 1} of 3</p><h2>{["A way to identify the application", "A few screening questions", "Check the application"][step]}</h2>
-            {step === 0 && <>
+            <p className="recruit-kicker">Step {step + 1} of 4</p><h2>{["Online informed consent", "A way to identify the application", "A few screening questions", "Check the application"][step]}</h2>
+            {step === 0 && <><div className="recruit-callout"><b>Draft for committee review — not approved research consent</b><p style={{whiteSpace:'pre-line'}}>{info?.informed_consent.text}</p><small>Version: {info?.informed_consent.version}</small></div><label className="recruit-checkbox"><input type="checkbox" required checked={informedConsent} onChange={e=>setInformedConsent(e.target.checked)} /><span>I have read the draft and agree to continue this fictional demonstration.</span></label><button type="button" className="recruit-outline" onClick={()=>{setInformedConsent(false);navigate('#home');}}>Decline and leave</button></>}
+            {step === 1 && <>
               <label>Demo alias<input name="preferred_name" autoComplete="off" minLength={2} maxLength={120} required value={form.preferred_name} onChange={e => update("preferred_name", e.target.value)} /></label>
               <label>Synthetic contact email<input name="contact_email" type="email" autoComplete="off" maxLength={255} required value={form.contact_email} onChange={e => update("contact_email", e.target.value)} placeholder="demo@example.com" /></label>
               <label>Study site <small>(optional)</small><select name="site_id" value={form.site_id} onChange={e => update("site_id", e.target.value)}><option value="">No preference / not listed</option>{info?.sites.map(site => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
               <label>How was the demo found? <small>(optional)</small><input name="recruitment_source" maxLength={120} value={form.recruitment_source} onChange={e => update("recruitment_source", e.target.value)} /></label>
             </>}
-            {step === 1 && questions.map(([key,title,question]) => <fieldset key={key}><legend>{title}</legend><p>{question}</p><div className="recruit-options">{[["true", "Yes"], ["false", "No"]].map(([value,label]) => <label key={value}><input type="radio" required name={key} value={value} checked={form[key] === value} onChange={e => update(key,e.target.value)} />{label}</label>)}</div></fieldset>)}
-            {step === 2 && <>
+            {step === 2 && questions.map(([key,title,question]) => <fieldset key={key}><legend>{title}</legend><p>{question}</p><div className="recruit-options">{[["true", "Yes"], ["false", "No"]].map(([value,label]) => <label key={value}><input type="radio" required name={key} value={value} checked={form[key] === value} onChange={e => update(key,e.target.value)} />{label}</label>)}</div></fieldset>)}
+            {step === 3 && <>
               <dl className="recruit-summary"><div><dt>Demo alias</dt><dd>{form.preferred_name}</dd></div><div><dt>Contact email</dt><dd>{form.contact_email}</dd></div><div><dt>Site</dt><dd>{info?.sites.find(s => s.id === form.site_id)?.name || "No preference"}</dd></div>{questions.map(([key,title]) => <div key={key}><dt>{title}</dt><dd>{form[key] === "true" ? "Yes" : "No"}</dd></div>)}</dl>
               <div className="recruit-callout"><b>Demo screening acknowledgement</b><p>The application and answers are stored for authorised staff to review. The form does not provide clinical advice, establish eligibility, or obtain approved research consent.</p><small>Statement version: {info?.consent_version}</small></div>
               <label className="recruit-checkbox"><input type="checkbox" name="consent_to_screen" required checked={consent} onChange={e => setConsent(e.target.checked)} /><span>I agree to submit this fictional application for demo screening.</span></label>
               <label className="recruit-checkbox"><input type="checkbox" name="privacy_acknowledged" required checked={privacy} onChange={e => setPrivacy(e.target.checked)} /><span>All details are synthetic. No real personal or health information has been entered.</span></label>
             </>}
             {error && <div className="recruit-error" role="alert">{error}</div>}
-            <div className="recruit-form-footer">{step > 0 && <button className="recruit-outline" type="button" disabled={busy} onClick={() => setStep(step-1)}>Back</button>}<button className="recruit-primary" disabled={busy}>{busy ? "Submitting…" : step === 2 ? "Submit demo application" : "Continue"}</button></div>
+            <div className="recruit-form-footer">{step > 0 && <button className="recruit-outline" type="button" disabled={busy} onClick={() => setStep(step-1)}>Back</button>}<button className="recruit-primary" disabled={busy}>{busy ? "Submitting…" : step === 3 ? "Submit demo application" : "Continue"}</button></div>
           </form>
         </div>}
       </>}

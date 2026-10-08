@@ -22,6 +22,7 @@ def _enroll(client, auth_headers):
             "contact_email": f"step1c2.{n}@example.com",
             "recruitment_source": "step1c2 acceptance",
             "consent_to_screen": True,
+            "informed_consent_accepted": True, "informed_consent_version": "committee-consent-draft-2026-10-08",
             "privacy_acknowledged": True,
             "screening_answers": {
                 "demo_online_access": True,

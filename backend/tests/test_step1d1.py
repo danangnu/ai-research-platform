@@ -59,7 +59,7 @@ def test_step1d1_protocol_validation_approval_immutability_and_rbac(
 ):
     health = client.get("/health")
     assert health.status_code == 200
-    assert health.json()["version"] == "0.7.1-recruitment-demo"
+    assert health.json()["version"] == "0.9.0-privacy-consent"
 
     project_response = client.post(
         "/api/projects",

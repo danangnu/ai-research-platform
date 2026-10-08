@@ -41,3 +41,5 @@ __all__ = [
 from app.models.study_workflow import StudyObservation
 
 from app.models.study_preparation import PreparedConfiguration, PreparedRun, PreparedObservation
+
+from app.models.consent import ConsentRecord

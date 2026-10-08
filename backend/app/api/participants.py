@@ -10,16 +10,19 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.deps import require_roles
 from app.core.roles import (
     ALLOCATION_ROLES,
+    PROJECT_ADMIN,
     PARTICIPANT,
     PARTICIPANT_ACCOUNT_ROLES,
     PARTICIPANT_MANAGEMENT_ROLES,
     PROJECT_READ_ROLES,
 )
 from app.core.security import hash_password
+from app.core.config import settings
 from app.db.base import utcnow
 from app.db.session import get_db
 from app.models import (
     AllocationState,
+    RecruitmentApplication,
     AuditEvent,
     Participant,
     ParticipantAllocation,
@@ -37,6 +40,7 @@ from app.schemas.common import (
     ParticipantSelfOut,
 )
 from app.services.audit import write_audit
+from app.services.privacy import safe_audit
 
 
 router = APIRouter(prefix="/api/participants", tags=["participants"])
@@ -170,7 +174,6 @@ def _account_link_out(
     return ParticipantAccountLinkOut(
         participant_id=participant.id,
         participant_code=participant.participant_code,
-        user_id=str(participant.user_id),
         account_status="linked",
         created_account=created_account,
         linked_at=participant.updated_at,
@@ -187,7 +190,7 @@ def link_participant_account(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(*PARTICIPANT_ACCOUNT_ROLES)),
+    user: User = Depends(require_roles(PROJECT_ADMIN)),
 ):
     participant = db.scalar(
         select(Participant)
@@ -202,13 +205,11 @@ def link_participant_account(
             detail="Only an enrolled participant can be linked to an account.",
         )
 
-    normalized_email = str(payload.email).strip().lower()
-    normalized_name = payload.full_name.strip()
-    if len(normalized_name) < 2:
-        raise HTTPException(
-            status_code=422,
-            detail="Participant display name must contain at least two characters.",
-        )
+    if user.email.lower() != settings.admin_email.lower():
+        raise HTTPException(403, "Only the designated administrator can provision participant access.")
+    application = db.get(RecruitmentApplication, participant.application_id)
+    normalized_email = application.contact_email.strip().lower()
+    normalized_name = participant.participant_code
     if participant.user_id:
         linked_user = db.get(User, participant.user_id)
         if linked_user and linked_user.email == normalized_email:
@@ -506,8 +507,7 @@ def get_participant_audit_trail(
     return ParticipantAuditTrailOut(
         participant_id=participant.id,
         participant_code=participant.participant_code,
-        application_id=participant.application_id,
-        events=events,
+        events=[safe_audit(event).model_dump() for event in events],
     )
 
 

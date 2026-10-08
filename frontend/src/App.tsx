@@ -383,6 +383,7 @@ function LimitedOverview({ user }: { user: User }) {
         <span className="status-pill">{user.roles[0] || "USER"}</span>
       </div>
 
+      <section className="panel"><h2>Welcome to your online study</h2><p>Keep your participant number and credentials private. Complete the assigned pre-test, follow your assigned activities for 30 days, then complete the post-test and participant feedback. For technical difficulties or general questions, use the administrator email supplied with your welcome package.</p><p className="tiny">This is a synthetic demonstration. Approved assessments, selection rules, consent wording and welcome email delivery are pending committee confirmation or configuration.</p></section>
       <div className="two-col">
         <section className="panel">
           <p className="eyebrow">My study identity</p>
@@ -486,9 +487,7 @@ function Recruitment({
   const selection = selected
     ? selections.find((item) => item.application_id === selected.id) || null
     : null;
-  const enrolledParticipant = selected
-    ? participants.find((item) => item.application_id === selected.id) || null
-    : null;
+  const enrolledParticipant = selected?.enrolled;
 
   useEffect(() => {
     if (!selectedId && applications.length) setSelectedId(applications[0].id);
@@ -637,7 +636,7 @@ function Recruitment({
                   <option value="eligible">Eligible</option>
                   <option value="ineligible">Ineligible</option>
                 </select>
-                <textarea name="review_note" rows={3} defaultValue={selected.review_note} placeholder="Reviewer note (synthetic demo only)" />
+                <textarea name="review_note" rows={3} defaultValue="" placeholder="Reviewer note (synthetic demo only)" />
                 <button className="primary" disabled={busy}>Save eligibility review</button>
               </form>}
 
@@ -647,8 +646,7 @@ function Recruitment({
                   {enrolledParticipant ? (
                     <div className="enrollment-success">
                       <strong>Participant enrolled</strong>
-                      <span>{enrolledParticipant.participant_code}</span>
-                      <small>Allocation: {enrolledParticipant.study_group || "Not allocated"}</small>
+                      <small>The participant number is not linked here. Open Participants for coded study records.</small>
                     </div>
                   ) : (
                     <>
@@ -918,15 +916,13 @@ function ParticipantsPage({
 
   async function linkAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedParticipant || !allowAccountLink || selectedParticipant.user_id) return;
+    if (!selectedParticipant || !allowAccountLink || selectedParticipant.account_linked) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     setAccountBusy(true);
     setMessage("");
     try {
       const link = await participantApi.linkAccount(selectedParticipant.id, {
-        email: data.get("email"),
-        full_name: data.get("full_name"),
         initial_password: data.get("initial_password") || null,
       });
       form.reset();
@@ -1103,7 +1099,7 @@ function ParticipantsPage({
                 <span className="tag recruitment-eligible">{participant.lifecycle_status}</span>
                 <span className="tag">{participant.allocation_status.replaceAll("_", " ")}</span>
                 {participant.study_group && <span className="tag">{participant.study_group}</span>}
-                {participant.user_id && <span className="tag account-linked">account linked</span>}
+                {participant.account_linked && <span className="tag account-linked">account linked</span>}
                 <button
                   type="button"
                   className="secondary compact-action"
@@ -1178,7 +1174,7 @@ function ParticipantsPage({
             </div>
             <dl className="detail-grid participant-detail-grid">
               <div><dt>Participant ID</dt><dd>{selectedParticipant.id}</dd></div>
-              <div><dt>Application reference</dt><dd>{selectedParticipant.application_id}</dd></div>
+              <div><dt>Identity access</dt><dd>Administrator reveal report only</dd></div>
               <div><dt>Study site</dt><dd>{siteName(selectedParticipant.site_id)}</dd></div>
               <div><dt>Enrolled</dt><dd>{formatDate(selectedParticipant.enrolled_at)}</dd></div>
               <div><dt>Lifecycle status</dt><dd>{selectedParticipant.lifecycle_status}</dd></div>
@@ -1186,20 +1182,18 @@ function ParticipantsPage({
               <div><dt>Assigned condition</dt><dd>{selectedParticipant.study_group || "Not allocated"}</dd></div>
               <div>
                 <dt>Participant account</dt>
-                <dd>{selectedParticipant.user_id ? "Linked to participant-only login" : "Not linked"}</dd>
+                <dd>{selectedParticipant.account_linked ? "Linked to participant-only login" : "Not linked"}</dd>
               </div>
             </dl>
 
-            {!selectedParticipant.user_id && allowAccountLink && (
+            {!selectedParticipant.account_linked && allowAccountLink && (
               <div className="account-link-block">
                 <strong>Link participant account</strong>
                 <p className="tiny">
-                  Link an existing active PARTICIPANT-only login, or create one with an initial password.
+                  Create or link a participant-only login using the protected application email, without displaying it.
                   The account can be linked to only one enrolled participant.
                 </p>
                 <form className="compact-form" onSubmit={linkAccount}>
-                  <input name="email" type="email" placeholder="Participant login email" required />
-                  <input name="full_name" placeholder="Participant display name" required minLength={2} />
                   <input
                     name="initial_password"
                     type="password"
@@ -1214,8 +1208,8 @@ function ParticipantsPage({
               </div>
             )}
 
-            {!selectedParticipant.user_id && !allowAccountLink && (
-              <p className="tiny">Account linking is restricted to project administrators and research leads.</p>
+            {!selectedParticipant.account_linked && !allowAccountLink && (
+              <p className="tiny">Account provisioning is restricted to the project administrator.</p>
             )}
 
             <div className="allocation-detail-block">
@@ -1241,7 +1235,7 @@ function ParticipantsPage({
                 {selectedAuditTrail && <span className="tag">{selectedAuditTrail.events.length} events</span>}
               </div>
               <p className="tiny">
-                Correlated application, selection, enrollment, allocation and account-link evidence.
+                Operational audit events with application and account links removed.
               </p>
               {auditLoading && <p className="tiny">Loading participant audit trail…</p>}
               {auditError && <div className="alert error">{auditError}</div>}
@@ -2344,7 +2338,7 @@ export default function App() {
             allocationSummary={allocationSummary}
             info={recruitmentInfo}
             allowAllocate={canAllocate(user)}
-            allowAccountLink={canAdminister(user)}
+            allowAccountLink={user.roles.includes("PROJECT_ADMIN")}
             loading={platformLoading}
             loadError={platformError}
             reload={loadAll}
@@ -2377,7 +2371,7 @@ export default function App() {
         )}
 
         {page === "admin" && canAdminister(user) && (
-          <AdminPage sites={sites} audit={audit} reload={loadAll} />
+          <><IdentityReveal enabled={user.roles.includes("PROJECT_ADMIN")} /><AdminPage sites={sites} audit={audit} reload={loadAll} /></>
         )}
 
         {["models"].includes(page) && (
@@ -2387,4 +2381,16 @@ export default function App() {
       </div>
     </>
   );
+}
+function IdentityReveal({enabled}:{enabled:boolean}) {
+  const [rows,setRows]=useState<{participant_code:string;name:string;email:string}[]>([]);
+  const [error,setError]=useState(''),[busy,setBusy]=useState(false);
+  useEffect(()=>{if(!rows.length)return; const id=setTimeout(()=>setRows([]),60000); return ()=>clearTimeout(id);},[rows]);
+  if(!enabled)return null;
+  async function reveal(e:FormEvent<HTMLFormElement>){
+    e.preventDefault(); const data=new FormData(e.currentTarget);setRows([]);setError('');setBusy(true);
+    try {const result=await api.revealIdentity({participant_codes:String(data.get('codes')).split(/[\s,]+/).filter(Boolean),reason:String(data.get('reason')),confirmed:data.get('confirmed')==='on'});setRows(result.rows);}
+    catch(err){setError(err instanceof Error?err.message:'Unable to reveal identities.');}finally{setBusy(false);}
+  }
+  return <section className="panel"><h2>Restricted identity reveal report</h2><p>Only the designated identity administrator can run this report. Each use is logged. Results clear after one minute or when this page closes.</p><form className="compact-form" onSubmit={reveal}><label>Participant numbers<input name="codes" required placeholder="P-000001" /></label><label>Purpose of reveal<input name="reason" required minLength={8} maxLength={500} /></label><label><input name="confirmed" type="checkbox" required /> I confirm that this identity reveal is necessary.</label><button className="primary" disabled={busy}>{busy?'Recording access…':'Run reveal report'}</button></form>{error&&<p role="alert">{error}</p>}{rows.length>0&&<><table><thead><tr><th>Participant number</th><th>Name</th><th>Email</th></tr></thead><tbody>{rows.map(r=><tr key={r.participant_code}><td>{r.participant_code}</td><td>{r.name}</td><td>{r.email}</td></tr>)}</tbody></table><button onClick={()=>setRows([])}>Hide identities now</button></>}</section>;
 }
