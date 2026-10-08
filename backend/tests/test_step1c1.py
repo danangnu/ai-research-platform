@@ -6,6 +6,7 @@ def _submit(client, email: str):
             "contact_email": email,
             "recruitment_source": "step1c1 acceptance",
             "consent_to_screen": True,
+            "informed_consent_accepted": True, "informed_consent_version": "committee-consent-draft-2026-10-08",
             "privacy_acknowledged": True,
             "screening_answers": {
                 "demo_online_access": True,
@@ -83,7 +84,7 @@ def test_step1c1_selection_enrollment_persistence_rbac_and_audit(
     assert participant["lifecycle_status"] == "enrolled"
     assert participant["allocation_status"] == "not_allocated"
     assert participant["study_group"] is None
-    assert participant["application_id"] == application_id
+    assert participant["application_id"] is None
     assert "preferred_name" not in participant
     assert "contact_email" not in participant
 
@@ -114,7 +115,7 @@ def test_step1c1_selection_enrollment_persistence_rbac_and_audit(
     participant_list = client.get("/api/participants", headers=auth_headers)
     assert participant_list.status_code == 200
     matching = [
-        row for row in participant_list.json() if row["application_id"] == application_id
+        row for row in participant_list.json() if row["id"] == participant["id"]
     ]
     assert len(matching) == 1
 

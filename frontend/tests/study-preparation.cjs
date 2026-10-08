@@ -80,6 +80,8 @@ if (!base || !api || !process.env.PREP_ADMIN_PASSWORD)
     preferred_name: "Fictional browser fixture",
     contact_email: email,
     consent_to_screen: true,
+    informed_consent_accepted: true,
+    informed_consent_version: "committee-consent-draft-2026-10-08",
     privacy_acknowledged: true,
     screening_answers: {
       demo_online_access: true,
@@ -95,8 +97,6 @@ if (!base || !api || !process.env.PREP_ADMIN_PASSWORD)
     "/api/participants/" + p.id + "/account",
     "POST",
     {
-      email,
-      full_name: "Fictional browser fixture",
       initial_password: "SyntheticBrowser123!",
     },
     token,

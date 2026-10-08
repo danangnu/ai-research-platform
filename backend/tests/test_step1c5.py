@@ -12,7 +12,7 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
 ):
     health = client.get("/health")
     assert health.status_code == 200
-    assert health.json()["version"] in {"0.6.0-step1c5", "0.7.0-step1d1", "0.7.1-recruitment-demo"}
+    assert health.json()["version"] in {"0.6.0-step1c5", "0.7.0-step1d1", "0.9.0-privacy-consent"}
 
     before_participants = client.get("/api/participants", headers=auth_headers).json()
     before_metrics = client.get("/api/participants/metrics", headers=auth_headers).json()
@@ -25,7 +25,7 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
 
     assert before_metrics["participants"] == len(before_participants)
     assert before_metrics["linked_accounts"] == sum(
-        row["user_id"] is not None for row in before_participants
+        row["account_linked"] for row in before_participants
     )
     assert before_summary["allocated"] == sum(before_summary["groups"].values())
 
@@ -36,6 +36,7 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
             "contact_email": "step1c5.acceptance@example.com",
             "recruitment_source": "step1c5 consolidated acceptance",
             "consent_to_screen": True,
+            "informed_consent_accepted": True, "informed_consent_version": "committee-consent-draft-2026-10-08",
             "privacy_acknowledged": True,
             "screening_answers": {
                 "demo_online_access": True,
@@ -111,8 +112,6 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
     assert allocation_retry.json()["study_group"] == allocation["study_group"]
 
     account_payload = {
-        "email": "step1c5.portal@example.com",
-        "full_name": "Step 1C.5 Portal Participant",
         "initial_password": "Step1C5Portal123!",
     }
     account_response = client.post(
@@ -129,7 +128,7 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
         json=account_payload,
     )
     assert account_retry.status_code == 200
-    assert account_retry.json()["user_id"] == account_link["user_id"]
+    assert "user_id" not in account_retry.json()
 
     account_conflict = client.post(
         f"/api/participants/{participant['id']}/account",
@@ -140,10 +139,10 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
             "initial_password": "Step1C5Conflict123!",
         },
     )
-    assert account_conflict.status_code == 409
+    assert account_conflict.status_code == 422
 
     participant_headers = _login(
-        client, account_payload["email"], account_payload["initial_password"]
+        client, "step1c5.acceptance@example.com", account_payload["initial_password"]
     )
     participant_self = client.get(
         "/api/participant/me", headers=participant_headers
@@ -180,17 +179,17 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
     assert len(matching) == 1
     persisted = matching[0]
     assert persisted["participant_code"] == participant["participant_code"]
-    assert persisted["application_id"] == application["id"]
+    assert persisted["application_id"] is None
     assert persisted["allocation_status"] == "allocated"
     assert persisted["study_group"] == allocation["study_group"]
-    assert persisted["user_id"] == account_link["user_id"]
+    assert persisted["user_id"] is None and persisted["account_linked"]
     assert refreshed_detail.json() == persisted
     assert refreshed_allocation.json()["id"] == allocation["id"]
 
     trail = refreshed_trail.json()
     assert trail["participant_id"] == participant["id"]
     assert trail["participant_code"] == participant["participant_code"]
-    assert trail["application_id"] == application["id"]
+    assert trail["application_id"] is None
     expected_actions = {
         "recruitment.application_submitted",
         "recruitment.application_reviewed",
@@ -218,7 +217,7 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
         for event in trail["events"]
         if event["action"] == "participant.account_linked"
     )
-    assert account_event["details"]["user_id"] == account_link["user_id"]
+    assert "user_id" not in account_event["details"]
     assert "email" not in account_event["details"]
 
     after_metrics = client.get(
@@ -254,7 +253,7 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
         row["allocation_status"] == "allocated" for row in refreshed_rows
     )
     assert after_metrics["linked_accounts"] == sum(
-        row["user_id"] is not None for row in refreshed_rows
+        row["account_linked"] for row in refreshed_rows
     )
     group_metric_keys = {
         "HumorBot": "humorbot",
@@ -290,7 +289,7 @@ def test_step1c5_consolidated_lifecycle_audit_persistence_counts_and_rbac(
     assert client.get("/api/projects", headers=participant_headers).status_code == 403
 
     refreshed_participant_headers = _login(
-        client, account_payload["email"], account_payload["initial_password"]
+        client, "step1c5.acceptance@example.com", account_payload["initial_password"]
     )
     refreshed_self = client.get(
         "/api/participant/me", headers=refreshed_participant_headers

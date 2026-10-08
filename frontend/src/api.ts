@@ -226,6 +226,8 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  revealIdentity: (body: Record<string, unknown>) => request<{rows:{participant_code:string;name:string;email:string}[]}>("/api/admin/identity-reveal", {method:"POST",body:JSON.stringify(body)}),
+
   audit: () =>
     request<AuditEvent[]>("/api/admin/audit?limit=100"),
 };
@@ -245,9 +247,11 @@ export type RecruitmentPublicInfo = {
   protocol_criteria_configured: boolean;
   demo_mode: boolean;
   sites: RecruitmentSite[];
+  informed_consent: {version:string; text:string; status:string};
 };
 
 export type RecruitmentApplication = {
+  enrolled: boolean;
   id: string;
   reference_code: string;
   site_id: string | null;
@@ -351,6 +355,7 @@ export type SelectionDecision = {
 };
 
 export type Participant = {
+  account_linked: boolean;
   id: string;
   participant_code: string;
   application_id: string;

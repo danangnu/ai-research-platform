@@ -6,6 +6,7 @@ def _enroll_participant(client, auth_headers, suffix: str):
             "contact_email": f"step1c4.{suffix}@example.com",
             "recruitment_source": "step1c4 acceptance",
             "consent_to_screen": True,
+            "informed_consent_accepted": True, "informed_consent_version": "committee-consent-draft-2026-10-08",
             "privacy_acknowledged": True,
             "screening_answers": {
                 "demo_online_access": True,
@@ -47,7 +48,7 @@ def test_step1c4_participant_account_link_and_self_service_rbac(
 ):
     health = client.get("/health")
     assert health.status_code == 200
-    assert health.json()["version"] in {"0.6.0-step1c5", "0.7.0-step1d1", "0.7.1-recruitment-demo"}
+    assert health.json()["version"] in {"0.6.0-step1c5", "0.7.0-step1d1", "0.9.0-privacy-consent"}
 
     # The seeded demo participant login remains safely unlinked until an
     # authorized study operator explicitly links it.
@@ -62,8 +63,6 @@ def test_step1c4_participant_account_link_and_self_service_rbac(
     assert allocation.status_code == 201
 
     account_payload = {
-        "email": "step1c4.portal@example.com",
-        "full_name": "Step 1C.4 Portal Participant",
         "initial_password": "Step1C4Portal123!",
     }
     linked = client.post(
@@ -86,7 +85,7 @@ def test_step1c4_participant_account_link_and_self_service_rbac(
         json=account_payload,
     )
     assert retry.status_code == 200
-    assert retry.json()["user_id"] == link["user_id"]
+    assert "user_id" not in retry.json() and "user_id" not in link
     assert retry.json()["created_account"] is False
 
     different_account = client.post(
@@ -98,12 +97,12 @@ def test_step1c4_participant_account_link_and_self_service_rbac(
             "initial_password": "Step1C4Other123!",
         },
     )
-    assert different_account.status_code == 409
+    assert different_account.status_code == 422
 
     login = client.post(
         "/api/auth/login",
         json={
-            "email": account_payload["email"],
+            "email": "step1c4.primary@example.com",
             "password": account_payload["initial_password"],
         },
     )
@@ -156,41 +155,10 @@ def test_step1c4_participant_account_link_and_self_service_rbac(
     assert client.get("/api/admin/audit", headers=linked_headers).status_code == 403
 
     second = _enroll_participant(client, auth_headers, "secondary")
-    duplicate_link = client.post(
-        f"/api/participants/{second['id']}/account",
-        headers=auth_headers,
-        json={
-            "email": account_payload["email"],
-            "full_name": account_payload["full_name"],
-        },
-    )
-    assert duplicate_link.status_code == 409
-
-    privileged_link = client.post(
-        f"/api/participants/{second['id']}/account",
-        headers=auth_headers,
-        json={
-            "email": "admin@test.example.com",
-            "full_name": "Test Administrator",
-        },
-    )
-    assert privileged_link.status_code == 409
-
-    existing_demo_link = client.post(
-        f"/api/participants/{second['id']}/account",
-        headers=auth_headers,
-        json={
-            "email": "participant@test.example.com",
-            "full_name": "Test Participant",
-        },
-    )
-    assert existing_demo_link.status_code == 201
-    assert existing_demo_link.json()["created_account"] is False
-    seeded_own_record = client.get(
-        "/api/participant/me", headers=participant_headers
-    )
-    assert seeded_own_record.status_code == 200
-    assert seeded_own_record.json()["participant_id"] == second["id"]
+    # Caller-controlled email/name links are rejected at the input boundary.
+    for email in ["step1c4.primary@example.com", "admin@test.example.com"]:
+        assert client.post(f"/api/participants/{second['id']}/account", headers=auth_headers,
+            json={"email": email, "full_name": "Forbidden join"}).status_code == 422
 
     audit = client.get("/api/admin/audit?limit=1000", headers=auth_headers)
     assert audit.status_code == 200
@@ -201,6 +169,6 @@ def test_step1c4_participant_account_link_and_self_service_rbac(
         and row["entity_id"] == participant["id"]
     ]
     assert len(account_events) == 1
-    assert account_events[0]["details"]["user_id"] == link["user_id"]
+    assert "user_id" not in account_events[0]["details"]
     assert "email" not in account_events[0]["details"]
 

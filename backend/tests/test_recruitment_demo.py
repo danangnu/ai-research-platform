@@ -8,7 +8,7 @@ from app.models import RecruitmentApplication
 
 def submit(client, **overrides):
     payload = dict(preferred_name="Fictional Applicant", contact_email=f"demo.{uuid.uuid4().hex}@example.com",
-                   consent_to_screen=True, privacy_acknowledged=True,
+                   consent_to_screen=True, privacy_acknowledged=True, informed_consent_accepted=True, informed_consent_version="committee-consent-draft-2026-10-08",
                    screening_answers={"demo_online_access": True, "demo_instruction_language": False, "demo_schedule_availability": True})
     payload.update(overrides)
     return client.post("/api/public/recruitment/applications", json=payload)
@@ -60,10 +60,12 @@ def test_withdrawal_idempotent_locked_and_reapplication(client, auth_headers):
     assert client.post(uri + "/selection", headers=auth_headers, json={"status": "selected"}).status_code == 409
     assert client.patch(uri + "/review", headers=auth_headers, json={"status": "eligible"}).status_code == 409
     events = client.get("/api/admin/audit?limit=200", headers=auth_headers).json()
-    assert len([e for e in events if e["entity_id"] == app["id"] and e["action"] == "recruitment.application_withdrawn"]) == 1
+    assert len([e for e in events if e["action"] == "recruitment.application_withdrawn"]) == 1
     metrics = client.get("/api/recruitment/metrics", headers=auth_headers).json()
     assert metrics["withdrawn"] >= 1
-    reapplied = submit(client, contact_email=app["contact_email"]).json()
+    with SessionLocal() as db:
+        email = db.get(RecruitmentApplication, app["id"]).contact_email
+    reapplied = submit(client, contact_email=email).json()
     assert reapplied["id"] != app["id"]
     assert client.post("/api/public/recruitment/status", json=key(app)).json()["stage"] == "withdrawn"
 
@@ -81,9 +83,10 @@ def test_status_through_enrollment_and_fresh_login(client, auth_headers, partici
     participant = client.post(uri + "/enroll", headers=auth_headers).json()
     assert client.post("/api/public/recruitment/status", json=key(app)).json()["stage"] == "enrolled"
     assert client.post("/api/public/recruitment/withdraw", json=key(app)).status_code == 409
-    email = f"linked.{uuid.uuid4().hex}@example.com"
+    with SessionLocal() as db:
+        email = db.get(RecruitmentApplication, app["id"]).contact_email
     link = client.post(f"/api/participants/{participant['id']}/account", headers=auth_headers,
-                       json={"email": email, "full_name": "Fictional Participant", "initial_password": "SyntheticDemo123!"})
+                       json={"initial_password": "SyntheticDemo123!"})
     assert link.status_code in (200, 201), link.text
     assert client.post("/api/public/recruitment/status", json=key(app)).json()["stage"] == "account_linked"
     login = client.post("/api/auth/login", json={"email": email, "password": "SyntheticDemo123!"})

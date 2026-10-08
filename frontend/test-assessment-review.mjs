@@ -12,7 +12,7 @@ await page.getByRole('button',{name:'Export review draft JSON',exact:true}).clic
 assert.match(await page.getByRole('status').innerText(),/participant code/);
 const box=await page.getByRole('status').boundingBox();assert.ok(box&&box.y>=0&&box.y+box.height<=900,'message must be on screen');
 await page.getByRole('tab',{name:'Screening questionnaire',exact:true}).press('ArrowDown');
-assert.equal(await page.getByRole('tab',{name:'Staff eligibility review',exact:true}).getAttribute('aria-selected'),'true');
+assert.equal(await page.getByRole('tab',{name:'Selection decisions (pending)',exact:true}).getAttribute('aria-selected'),'true');
 await page.getByRole('tab',{name:'Study walkthrough',exact:true}).click();
 await page.getByLabel('Fictional participant code').fill('DEMO-001');
 await page.getByRole('tab',{name:'Screening questionnaire',exact:true}).click();
@@ -25,7 +25,7 @@ await page.getByLabel('q10_0',{exact:true}).selectOption('No');
 assert.equal(await page.getByLabel('q10_2',{exact:true}).count(),0);
 await page.getByLabel('q5_0',{exact:true}).selectOption('No');
 assert.equal(await page.getByLabel('q6_0',{exact:true}).count(),0);
-await page.getByRole('tab',{name:'Staff eligibility review',exact:true}).click();
+await page.getByRole('tab',{name:'Selection decisions (pending)',exact:true}).click();
 assert.equal(await page.getByLabel('staff_2',{exact:true}).count(),1);
 await page.getByRole('tab',{name:'Test result entry',exact:true}).click();
 async function common(visit){
@@ -42,7 +42,7 @@ await page.getByLabel('Maximum entered by assessor',{exact:true}).fill('30');
 await page.getByRole('button',{name:'Add draft result',exact:true}).click();
 assert.ok((await page.getByRole('heading',{name:'Draft results (1)',exact:true}).count())===1);
 await page.getByLabel('Instrument',{exact:true}).selectOption('SAGE');
-await common('Three-month follow-up');
+await common('Day-30 follow-up');
 await page.getByLabel('Recorded total',{exact:true}).fill('100');
 await page.getByLabel('Maximum entered by assessor',{exact:true}).fill('10');
 await page.getByRole('button',{name:'Add draft result',exact:true}).click();

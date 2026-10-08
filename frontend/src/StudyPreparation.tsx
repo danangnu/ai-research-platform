@@ -88,11 +88,11 @@ const blank = (): Spec => ({
     "Pending study-team instructions for interaction with the assigned bot",
   synthetic_only: true,
   schedule: {
-    duration_days: 90,
+    duration_days: 30,
     sessions_per_week: 3,
     suggested_minutes_min: 5,
     suggested_minutes_max: 10,
-    interim_day: 45,
+    interim_day: null,
   },
   forms: {
     questionnaire: blankForm("Background questionnaire"),
@@ -357,7 +357,7 @@ export function StudyPreparation({
               </label>
             </div>
             <p className="tiny">
-              90 days is a draft setting, not three calendar months. Frequency
+              30 days is the current study duration. Frequency
               is a target; missed sessions do not block the post-test. An
               interim reminder does not create an assessment or send a
               notification.
