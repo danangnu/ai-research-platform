@@ -2301,6 +2301,8 @@ export default function App() {
         </div>
 
         <nav>
+          <button onClick={() => { window.location.href = "/digit-span.html"; }}>Digit Span game</button>
+          <button onClick={() => { window.location.href = "/committee-demo.html"; }}>Committee demo</button>
           {navigation.filter(item => ["overview", "recruitment", "participants", "analysis", "workflow", "preparation"].includes(item.page)).map(item => (
             <button key={item.page} className={page === item.page ? "active" : ""} onClick={() => setPage(item.page)}>
               <span>{item.page === "overview" && user.roles.includes("PARTICIPANT") ? "My study" : item.label}</span>
@@ -2386,4 +2388,3 @@ export default function App() {
     </>
   );
 }
-

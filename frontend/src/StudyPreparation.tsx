@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { getToken, Participant, request } from "./api";
 import { ParticipantStudy } from "./StudyWorkflow";
 import "./study-preparation.css";
+import { AssessmentDraft } from "./AssessmentDraft";
 
 type Choice = { value: string; label: string; points: number | null };
 type Item = {
@@ -209,10 +210,10 @@ export function StudyPreparation({
         <h1>Questionnaire, assessments and schedule</h1>
         <p>
           Prepare a separate fictional walkthrough. Existing four-question demo
-          records remain unchanged. Clinical questions, scoring and interaction
-          instructions are pending the study materials.
+          records remain unchanged. Committee demonstration uses provisional MoCA and Iowa Trail Making at baseline, SAGE Form 1 at follow-up, and participant feedback. Final scoring and session details remain subject to the approved protocol.
         </p>
       </header>
+      <details className="panel"><summary>Committee / IRB demonstration forms</summary><AssessmentDraft /></details>
       {notice && (
         <div role="status" className="alert">
           {notice}

@@ -94,6 +94,8 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
       <nav aria-label="Recruitment navigation">
         <button aria-current={route === "#home" ? "page" : undefined} onClick={() => navigate("#home")}>About the study</button>
         <button aria-current={route === "#status" ? "page" : undefined} onClick={() => navigate("#status")}>Application status</button>
+        <button onClick={() => { window.location.href = "/digit-span.html"; }}>Digit Span game</button>
+        <button onClick={() => { window.location.href = "/committee-demo.html"; }}>Committee demo</button>
         <button className="recruit-outline" onClick={onSignIn}>Staff & participant sign in <span aria-hidden="true">↗</span></button>
       </nav>
     </header>
@@ -115,6 +117,7 @@ export default function RecruitmentSite({ route, navigate, onSignIn }: {
             <p className="recruit-preview-foot">Research tools · Clinical benefit has not been established</p>
           </aside>
         </section>
+        <section className="recruit-section" aria-labelledby="digit-span-title"><p className="recruit-kicker">Memory game</p><h2 id="digit-span-title">Try Digit Span.</h2><p>Watch a sequence of numbers, then recall them forwards or backwards. Choose your sequence length and speed.</p><p className="recruit-caption">For practice and demonstration. Game scores are kept only for this page session and are not saved as study results.</p><button className="recruit-primary" onClick={() => { window.location.href = "/digit-span.html"; }}>Play Digit Span <span aria-hidden="true">→</span></button></section>
         <section className="recruit-section" aria-labelledby="journey-title"><p className="recruit-kicker">The study journey</p><h2 id="journey-title">From screening to study review.</h2><div className="recruit-journey">
           {[["01", "Apply", "Enter a demo alias, contact address, and screening answers."], ["02", "Review", "Staff review the application and record a selection decision."], ["03", "Enroll", "Selected applicants receive a separate participant record."], ["04", "Access", "Staff link a login for the pre-test, three demo sessions, and post-test."]].map(([n,t,d]) => <article key={n}><span>{n}</span><h3>{t}</h3><p>{d}</p></article>)}
         </div></section>

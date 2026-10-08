@@ -1,0 +1,839 @@
+{
+  "version": "screening-review-2026-10-08-v1",
+  "source": "Screening Questionnaire.docx",
+  "source_sha256": "efa6010fa9ead1a7306b41b0bce4ec09ff4089517159f767e505788670996b7b",
+  "items": [
+    {
+      "number": 1,
+      "section": "Section A - Basic Eligibility",
+      "prompt": "What is your age?",
+      "parts": [
+        {
+          "kind": "number",
+          "label": "Age in years"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "section": "Section A - Basic Eligibility",
+      "prompt": "Are you able to communicate sufficiently in English to understand and participate in conversations with the study chatbot and complete cognitive assessments?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "section": "Section A - Basic Eligibility",
+      "prompt": "Are you able and willing to use a computer, tablet, or smartphone for the study?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes, independently",
+            "Yes, with assistance",
+            "No",
+            "Unsure"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "section": "Section A - Basic Eligibility",
+      "prompt": "Would you be willing to interact with an AI conversational chatbot regularly for approximately three months?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Have you ever experienced an injury involving your head or brain?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Approximately when did the injury occur?",
+      "parts": [
+        {
+          "kind": "text",
+          "label": "Date/year:"
+        },
+        {
+          "kind": "number",
+          "label": "Age at injury:  years"
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "How did the injury happen?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Fall",
+            "Motor vehicle accident",
+            "Motorcycle/bicycle accident",
+            "Sports or recreational injury",
+            "Workplace injury",
+            "Assault",
+            "Blast/explosion",
+            "Military-related injury",
+            "Penetrating injury",
+            "Other",
+            "Do not know/remember"
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "Other — please specify",
+          "other_for": 0
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Please briefly describe what happened.",
+      "parts": [
+        {
+          "kind": "text",
+          "label": "Details"
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Were you diagnosed by a healthcare professional with any of the following after the event?",
+      "parts": [
+        {
+          "kind": "multi",
+          "label": "Select all that apply",
+          "options": [
+            "Concussion",
+            "Mild traumatic brain injury",
+            "Moderate traumatic brain injury",
+            "Severe traumatic brain injury",
+            "Brain hemorrhage/bleeding",
+            "Brain contusion",
+            "Skull fracture",
+            "Diffuse axonal injury",
+            "Other brain injury",
+            "I was treated for a head injury but do not know the diagnosis",
+            "No formal diagnosis",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "Other — please specify",
+          "other_for": 0
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Did you lose consciousness because of the injury?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "No",
+            "Yes",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, approximately how long?",
+          "when_yes": true
+        },
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Less than 1 minute",
+            "1–30 minutes",
+            "31 minutes–24 hours",
+            "More than 24 hours",
+            "Duration unknown"
+          ],
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Immediately after the injury, were you confused, disoriented, dazed, or unable to think clearly?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Did you experience memory loss around the time of the injury—for example, being unable to remember events immediately before or after it?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, approximately how long did the memory problem last?",
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Details",
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Were you hospitalized because of the injury?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "If Yes, approximately how long?",
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 14,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Did you require brain or neurological surgery because of the injury?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, please describe if known:",
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Details",
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 15,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Did you have a CT scan or MRI after the injury?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Were you told that the scan or medical evaluation showed damage to the brain?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, what were you told?",
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Details",
+          "when_yes": true
+        },
+        {
+          "kind": "note",
+          "label": "Examples may include the location of injury, bleeding, contusion, structural damage, or another abnormality.",
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 17,
+      "section": "Section B - History of Brain or Neurological Injury",
+      "prompt": "Do you have medical records documenting the brain injury or neurological diagnosis?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 18,
+      "section": "Section C - Other Neurological Conditions",
+      "prompt": "Have you ever been diagnosed by a healthcare professional with a neurological condition that has affected, or may affect, your cognitive functioning?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, select all that apply:",
+          "when_yes": true
+        },
+        {
+          "kind": "multi",
+          "label": "Select all that apply",
+          "options": [
+            "Stroke",
+            "Mild Cognitive Impairment (MCI)",
+            "Alzheimer's disease or another dementia",
+            "Brain tumor",
+            "Epilepsy/seizure disorder",
+            "Parkinson's disease",
+            "Multiple sclerosis",
+            "Encephalitis/brain infection",
+            "Anoxic/hypoxic brain injury",
+            "Other acquired brain injury",
+            "Learning/developmental cognitive disability",
+            "Other neurological condition"
+          ],
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Other — please specify",
+          "other_for": 2,
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 19,
+      "section": "Section C - Other Neurological Conditions",
+      "prompt": "When was this condition diagnosed?",
+      "parts": [
+        {
+          "kind": "text",
+          "label": "Details"
+        }
+      ]
+    },
+    {
+      "number": 20,
+      "section": "Section C - Other Neurological Conditions",
+      "prompt": "Has a doctor, psychologist, neuropsychologist, occupational therapist, speech-language pathologist, or other qualified healthcare professional ever told you that you have problems with memory, attention, thinking, language, or other cognitive abilities?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, please describe:",
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Details",
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 21,
+      "section": "Section D - Current Cognitive Difficulties",
+      "prompt": "Since your injury or neurological condition, have you experienced any of the following?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Memory problems",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "kind": "choice",
+          "label": "Difficulty concentrating",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "kind": "choice",
+          "label": "Difficulty maintaining attention",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "kind": "choice",
+          "label": "Slower thinking/processing",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "kind": "choice",
+          "label": "Difficulty finding words",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "kind": "choice",
+          "label": "Difficulty understanding conversation",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "kind": "choice",
+          "label": "Difficulty planning or organizing",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "kind": "choice",
+          "label": "Difficulty solving problems",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "kind": "choice",
+          "label": "Difficulty switching between tasks",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "kind": "choice",
+          "label": "Difficulty remembering instructions",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        },
+        {
+          "kind": "choice",
+          "label": "Confusion or disorientation",
+          "options": [
+            "No",
+            "Mild",
+            "Moderate",
+            "Severe"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 22,
+      "section": "Section D - Current Cognitive Difficulties",
+      "prompt": "Compared with your abilities before the injury or neurological condition, how would you describe your cognitive abilities now?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "No noticeable change",
+            "Slightly worse",
+            "Moderately worse",
+            "Substantially worse",
+            "Unsure/not applicable"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 23,
+      "section": "Section D - Current Cognitive Difficulties",
+      "prompt": "Do these difficulties currently affect your daily activities?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Not at all",
+            "A little",
+            "Moderately",
+            "A lot"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If applicable, select affected activities:"
+        },
+        {
+          "kind": "multi",
+          "label": "Select all that apply",
+          "options": [
+            "Work",
+            "School/study",
+            "Managing appointments",
+            "Managing finances",
+            "Taking medications correctly",
+            "Cooking/household tasks",
+            "Driving/navigation",
+            "Social conversations",
+            "Using technology",
+            "Other"
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "Other — please specify",
+          "other_for": 2
+        }
+      ]
+    },
+    {
+      "number": 24,
+      "section": "Section E — Previous Cognitive Assessment and Rehabilitation",
+      "prompt": "Have you previously undergone formal cognitive or neuropsychological testing?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes:",
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Approximate date:",
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Reason for testing:",
+          "when_yes": true
+        },
+        {
+          "kind": "note",
+          "label": "Were you told that the results showed cognitive impairment?",
+          "when_yes": true
+        },
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ],
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 25,
+      "section": "Section E — Previous Cognitive Assessment and Rehabilitation",
+      "prompt": "Have you received rehabilitation or therapy following your brain injury or neurological condition?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, select all that apply:",
+          "when_yes": true
+        },
+        {
+          "kind": "multi",
+          "label": "Select all that apply",
+          "options": [
+            "Cognitive rehabilitation",
+            "Neuropsychological rehabilitation",
+            "Speech/language therapy",
+            "Occupational therapy",
+            "Physical therapy",
+            "Psychological/behavioral therapy",
+            "Other"
+          ],
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Other — please specify",
+          "other_for": 2,
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 26,
+      "section": "Section F - Other Factors Relevant to Participation",
+      "prompt": "Do you currently have significant hearing, vision, speech, language, or motor difficulties that could prevent you from interacting with a chatbot or completing cognitive tests, even with reasonable assistance?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "No",
+            "Yes",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, describe:",
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Details",
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 27,
+      "section": "Section F - Other Factors Relevant to Participation",
+      "prompt": "Have you experienced another major brain injury, stroke, seizure, neurological event, or major change in your neurological condition within the last three months?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, describe:",
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Details",
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 28,
+      "section": "Section F - Other Factors Relevant to Participation",
+      "prompt": "Are you currently taking medication that you have been told may significantly affect your memory, attention, alertness, or thinking?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No",
+            "Unsure"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, please list if known:",
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Details",
+          "when_yes": true
+        }
+      ]
+    },
+    {
+      "number": 29,
+      "section": "Section F - Other Factors Relevant to Participation",
+      "prompt": "Is there any other medical, neurological, psychological, communication, or functional condition that you believe could affect your ability to participate in a three-month chatbot study or complete cognitive assessments?",
+      "parts": [
+        {
+          "kind": "choice",
+          "label": "Select one",
+          "options": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "kind": "note",
+          "label": "If Yes, please describe:",
+          "when_yes": true
+        },
+        {
+          "kind": "text",
+          "label": "Details",
+          "when_yes": true
+        }
+      ]
+    }
+  ],
+  "staff_groups": [
+    {
+      "label": "Evidence of relevant neurological/cognitive history",
+      "options": [
+        "Documented or reported traumatic/acquired brain injury",
+        "Other neurological condition associated with cognitive impairment",
+        "Professionally diagnosed cognitive impairment/disability",
+        "Persistent cognitive symptoms following neurological injury/condition",
+        "Previous abnormal cognitive/neuropsychological assessment",
+        "Medical documentation available",
+        "History requires clinical verification",
+        "No qualifying neurological/cognitive history identified"
+      ],
+      "kind": "multi"
+    },
+    {
+      "label": "Ability to participate",
+      "options": [
+        "Appears able to communicate with chatbot",
+        "Appears able to complete standardized cognitive assessment",
+        "Technology requirements appear manageable",
+        "Requires accommodations",
+        "Further clinical review required"
+      ],
+      "kind": "multi"
+    },
+    {
+      "label": "Preliminary Screening Outcome",
+      "options": [
+        "Potentially eligible - proceed to formal eligibility assessment and informed-consent process",
+        "Potentially eligible - medical/clinical records or investigator review required",
+        "Not eligible based on current study criteria",
+        "Unable to determine - further assessment required"
+      ],
+      "kind": "choice"
+    }
+  ]
+}

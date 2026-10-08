@@ -23,6 +23,14 @@ jobs:
         working-directory: frontend
       - run: python scripts/test_recruitment_ui.py
       - run: python scripts/test_study_preparation_ui.py
+      - run: node build-review.mjs && node test-assessment-review.mjs
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: synthetic-study-screenshots
+          path: frontend/test-results/*.png
+          retention-days: 3
 
   backend:
     runs-on: ubuntu-latest

@@ -1,0 +1,249 @@
+{
+  "version": "participant-feedback-demo-v1",
+  "source": "Research Tool 1.pdf",
+  "source_sha256": "99fb1b43b850b5bc8b07ef884e3eb823543a14baaa3979f4dae0250a3baecedd",
+  "respondent": "participant",
+  "adaptation_status": "Provisional participant wording; not a validated adaptation. Administrator demographics omitted. Not applicable added to the perception items for unexperienced comparisons. No composite score.",
+  "items": [
+    {
+      "id": "tech1",
+      "group": "Technology",
+      "number": 1,
+      "prompt": "Technology is useful in general",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "tech2",
+      "group": "Technology",
+      "number": 2,
+      "prompt": "Generally speaking, technology helps to be more productive",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "tech3",
+      "group": "Technology",
+      "number": 3,
+      "prompt": "Life would be difficult without technology",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "tech4",
+      "group": "Technology",
+      "number": 4,
+      "prompt": "Technological advances save time and effort",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "tech5",
+      "group": "Technology",
+      "number": 5,
+      "prompt": "I like using technological devices",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "tech6",
+      "group": "Technology",
+      "number": 6,
+      "prompt": "I enjoy learning about technology",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "agent1",
+      "group": "Conversational agent",
+      "number": 1,
+      "prompt": "I think the conversational agent was useful",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "agent2",
+      "group": "Conversational agent",
+      "number": 2,
+      "prompt": "The conversational agent helped me during the session",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "agent3",
+      "group": "Conversational agent",
+      "number": 3,
+      "prompt": "I felt comfortable using the conversational agent",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "agent4",
+      "group": "Conversational agent",
+      "number": 4,
+      "prompt": "The conversational agent was easy to use",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "agent5",
+      "group": "Conversational agent",
+      "number": 5,
+      "prompt": "I liked using the conversational agent",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "agent6",
+      "group": "Conversational agent",
+      "number": 6,
+      "prompt": "I prefer the test with the conversational agent to the traditional test with a human",
+      "maximum": 5,
+      "adapted": false
+    },
+    {
+      "id": "usability1",
+      "group": "Platform usability",
+      "number": 1,
+      "prompt": "Overall, I am satisfied with how easy it is to use the study platform",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability2",
+      "group": "Platform usability",
+      "number": 2,
+      "prompt": "It was simple to use the study platform",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability3",
+      "group": "Platform usability",
+      "number": 3,
+      "prompt": "I could effectively complete the tasks and questions posed by the study platform",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability4",
+      "group": "Platform usability",
+      "number": 4,
+      "prompt": "I was able to complete the activities quickly using the study platform",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability5",
+      "group": "Platform usability",
+      "number": 5,
+      "prompt": "I was able to complete the activities efficiently using the study platform",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability6",
+      "group": "Platform usability",
+      "number": 6,
+      "prompt": "I felt comfortable using the study platform",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability7",
+      "group": "Platform usability",
+      "number": 7,
+      "prompt": "It was easy to learn to use the study platform",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability8",
+      "group": "Platform usability",
+      "number": 8,
+      "prompt": "I believe I could become comfortable with the study platform quickly",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability9",
+      "group": "Platform usability",
+      "number": 9,
+      "prompt": "The study platform gave error messages that clearly told me how to fix problems",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability10",
+      "group": "Platform usability",
+      "number": 10,
+      "prompt": "Whenever I made a mistake using the study platform, I could recover easily and quickly",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability11",
+      "group": "Platform usability",
+      "number": 11,
+      "prompt": "The information provided by the study platform was clear",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability12",
+      "group": "Platform usability",
+      "number": 12,
+      "prompt": "It was easy to find the information I needed from the study platform",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability13",
+      "group": "Platform usability",
+      "number": 13,
+      "prompt": "The information provided by the study platform was easy to understand",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability14",
+      "group": "Platform usability",
+      "number": 14,
+      "prompt": "The information was effective in helping me complete the tasks",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability15",
+      "group": "Platform usability",
+      "number": 15,
+      "prompt": "The interface of the study platform was pleasant",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability16",
+      "group": "Platform usability",
+      "number": 16,
+      "prompt": "I liked using the interface of the study platform",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability17",
+      "group": "Platform usability",
+      "number": 17,
+      "prompt": "The study platform has all the functions and capabilities I expect it to have",
+      "maximum": 7,
+      "adapted": true
+    },
+    {
+      "id": "usability18",
+      "group": "Platform usability",
+      "number": 18,
+      "prompt": "Overall, I am satisfied with the study platform",
+      "maximum": 7,
+      "adapted": true
+    }
+  ]
+}
