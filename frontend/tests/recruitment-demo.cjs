@@ -82,11 +82,11 @@ const output=path.resolve(__dirname,'../test-results'); fs.mkdirSync(output,{rec
  await portal.getByLabel('Password',{exact:true}).fill(process.env.DEMO_UI_PASSWORD);
  await portal.getByRole('button',{name:'Sign in',exact:true}).click();
  await portal.getByRole('heading',{name:'My study',exact:true}).waitFor();
- await portal.getByText(participantCode,{exact:true}).waitFor();
+ await portal.getByRole('main').getByText(participantCode,{exact:true}).waitFor();
  assert.equal(await portal.getByRole('button',{name:'Recruitment',exact:true}).count(),0);
  assert.equal(await portal.getByRole('button',{name:'Admin',exact:true}).count(),0);
  await portal.reload();
- await portal.getByText(participantCode,{exact:true}).waitFor();
+ await portal.getByRole('main').getByText(participantCode,{exact:true}).waitFor();
 
  // Complete the new synthetic study flow and verify persistence and staff results.
  await portal.getByRole('heading',{name:'Pre-test',exact:true}).waitFor();
