@@ -1,5 +1,5 @@
 {
-  "version": "screening-review-2026-10-08-v1",
+  "version": "screening-review-2026-10-08-v2-30day",
   "source": "Screening Questionnaire.docx",
   "source_sha256": "efa6010fa9ead1a7306b41b0bce4ec09ff4089517159f767e505788670996b7b",
   "items": [
@@ -50,7 +50,7 @@
     {
       "number": 4,
       "section": "Section A - Basic Eligibility",
-      "prompt": "Would you be willing to interact with an AI conversational chatbot regularly for approximately three months?",
+      "prompt": "Would you be willing to interact with an AI conversational chatbot regularly for 30 days?",
       "parts": [
         {
           "kind": "choice",
@@ -776,7 +776,7 @@
     {
       "number": 29,
       "section": "Section F - Other Factors Relevant to Participation",
-      "prompt": "Is there any other medical, neurological, psychological, communication, or functional condition that you believe could affect your ability to participate in a three-month chatbot study or complete cognitive assessments?",
+      "prompt": "Is there any other medical, neurological, psychological, communication, or functional condition that you believe could affect your ability to participate in a 30-day chatbot study or complete cognitive assessments?",
       "parts": [
         {
           "kind": "choice",
